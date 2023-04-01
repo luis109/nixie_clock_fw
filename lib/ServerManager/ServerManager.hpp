@@ -4,15 +4,10 @@
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 #include "LittleFS.h"
+#include "ServerManagerDefinitions.hpp"
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
-
-// Search for parameter in HTTP POST request
-const char* PARAM_INPUT_1 = "ssid";
-const char* PARAM_INPUT_2 = "pass";
-const char* PARAM_INPUT_3 = "ip";
-const char* PARAM_INPUT_4 = "gateway";
 
 //Variables to save values from HTML form
 String ssid;
@@ -20,30 +15,17 @@ String pass;
 String ip;
 String gateway;
 
-// File paths to save input values permanently
-const char* ssidPath = "/ssid.txt";
-const char* passPath = "/pass.txt";
-const char* ipPath = "/ip.txt";
-const char* gatewayPath = "/gateway.txt";
-
+// Set the device's IP address
 IPAddress localIP;
-//IPAddress localIP(192, 168, 1, 200); // hardcoded
 
 // Set your Gateway IP address
 IPAddress localGateway;
-//IPAddress localGateway(192, 168, 1, 1); //hardcoded
 IPAddress subnet(255, 255, 0, 0);
 
-// Timer variables
-unsigned long previousMillis = 0;
-const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
-
-// Set LED GPIO
-const int ledPin = 2;
 // Stores LED state
-
 String ledState;
 
+// Restart ESP flag
 boolean restart = false;
 
 // Read File from LittleFS
@@ -106,7 +88,7 @@ initWiFi()
   WiFi.begin(ssid.c_str(), pass.c_str());
 
   Serial.println("Connecting to WiFi...");
-  delay(20000);
+  delay(SM_WIFI_TIMEOUT);
   if(WiFi.status() != WL_CONNECTED) {
     Serial.println("Failed to connect.");
     return false;
@@ -121,7 +103,7 @@ String
 processor(const String& var)
 {
   if(var == "STATE") {
-    if(!digitalRead(ledPin)) {
+    if(!digitalRead(SM_LED_PIN)) {
       ledState = "ON";
     }
     else {
@@ -135,15 +117,23 @@ processor(const String& var)
 void
 webStateMachine()
 {
+  // Set GPIO 2 as an OUTPUT
+  pinMode(SM_LED_PIN, OUTPUT);
+  digitalWrite(SM_LED_PIN, LOW);
+
   // Load values saved in LittleFS
-  ssid = readFile(LittleFS, ssidPath);
-  pass = readFile(LittleFS, passPath);
-  ip = readFile(LittleFS, ipPath);
-  gateway = readFile (LittleFS, gatewayPath);
+  ssid = readFile(LittleFS, SM_PATH_SSID);
+  pass = readFile(LittleFS, SM_PATH_PASS);
+  ip = readFile(LittleFS, SM_PATH_IP);
+  gateway = readFile (LittleFS, SM_PATH_GATEWAY);
+
+#ifdef SERVER_MANAGER_DEBUG
   Serial.println(ssid);
   Serial.println(pass);
   Serial.println(ip);
   Serial.println(gateway);
+#endif
+
 
   if(initWiFi()) {
     // Route for root / web page
@@ -157,14 +147,14 @@ webStateMachine()
     // Route to set GPIO state to HIGH
     server.on("/on", HTTP_GET, [](AsyncWebServerRequest *request) 
     {
-      digitalWrite(ledPin, LOW);
+      digitalWrite(SM_LED_PIN, LOW);
       request->send(LittleFS, "/index.html", "text/html", false, processor);
     });
 
     // Route to set GPIO state to LOW
     server.on("/off", HTTP_GET, [](AsyncWebServerRequest *request) 
     {
-      digitalWrite(ledPin, HIGH);
+      digitalWrite(SM_LED_PIN, HIGH);
       request->send(LittleFS, "/index.html", "text/html", false, processor);
     });
     server.begin();
@@ -172,13 +162,17 @@ webStateMachine()
   else 
   {
     // Connect to Wi-Fi network with SSID and password
+#ifdef SERVER_MANAGER_DEBUG
     Serial.println("Setting AP (Access Point)");
+#endif
     // NULL sets an open Access Point
     WiFi.softAP("ESP-WIFI-MANAGER", NULL);
 
     IPAddress IP = WiFi.softAPIP();
+#ifdef SERVER_MANAGER_DEBUG
     Serial.print("AP IP address: ");
-    Serial.println(IP); 
+    Serial.println(IP);
+#endif
 
     // Web Server Root URL
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -193,38 +187,32 @@ webStateMachine()
         AsyncWebParameter* p = request->getParam(i);
         if(p->isPost()){
           // HTTP POST ssid value
-          if (p->name() == PARAM_INPUT_1) {
+          if (p->name() == SM_PARAM_SSID) {
             ssid = p->value().c_str();
-            Serial.print("SSID set to: ");
-            Serial.println(ssid);
             // Write file to save value
-            writeFile(LittleFS, ssidPath, ssid.c_str());
+            writeFile(LittleFS, SM_PATH_SSID, ssid.c_str());
           }
           // HTTP POST pass value
-          if (p->name() == PARAM_INPUT_2) {
+          if (p->name() == SM_PARAM_PASS) {
             pass = p->value().c_str();
-            Serial.print("Password set to: ");
-            Serial.println(pass);
             // Write file to save value
-            writeFile(LittleFS, passPath, pass.c_str());
+            writeFile(LittleFS, SM_PATH_PASS, pass.c_str());
           }
           // HTTP POST ip value
-          if (p->name() == PARAM_INPUT_3) {
+          if (p->name() == SM_PARAM_IP) {
             ip = p->value().c_str();
-            Serial.print("IP Address set to: ");
-            Serial.println(ip);
             // Write file to save value
-            writeFile(LittleFS, ipPath, ip.c_str());
+            writeFile(LittleFS, SM_PATH_IP, ip.c_str());
           }
           // HTTP POST gateway value
-          if (p->name() == PARAM_INPUT_4) {
+          if (p->name() == SM_PARAM_GATEWAY) {
             gateway = p->value().c_str();
-            Serial.print("Gateway set to: ");
-            Serial.println(gateway);
             // Write file to save value
-            writeFile(LittleFS, gatewayPath, gateway.c_str());
+            writeFile(LittleFS, SM_PATH_GATEWAY, gateway.c_str());
           }
-          //Serial.printf("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
+#ifdef SERVER_MANAGER_DEBUG
+          Serial.printf("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
+#endif
         }
       }
       restart = true;
