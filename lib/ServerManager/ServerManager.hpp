@@ -21,6 +21,7 @@ IPAddress localIP;
 // Set your Gateway IP address
 IPAddress localGateway;
 IPAddress subnet(255, 255, 0, 0);
+IPAddress dns(8, 8, 8, 8);
 
 // Stores LED state
 String ledState;
@@ -81,7 +82,7 @@ initWiFi()
   localIP.fromString(ip.c_str());
   localGateway.fromString(gateway.c_str());
 
-  if (!WiFi.config(localIP, localGateway, subnet)){
+  if (!WiFi.config(localIP, localGateway, subnet, dns)){
     Serial.println("STA Failed to configure");
     return false;
   }
