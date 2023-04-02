@@ -1,6 +1,10 @@
 #include <Arduino.h>
 #include "ServerManager.hpp"
 
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 0;
+const int   daylightOffset_sec = 3600;
+
 // Initialize LittleFS
 void initFS() {
   if (!LittleFS.begin()) {
@@ -22,6 +26,9 @@ void setup() {
   digitalWrite(ledPin, LOW);
 
   webStateMachine();
+
+  // Init and get the time
+  // configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 }
 
 void loop() {
