@@ -40,9 +40,7 @@ DisplayDriver::setDisplay(const uint8_t digit_set_0, const uint8_t digit_set_1, 
 {
   if (digit_set_0 > 99 || digit_set_1 > 99 || digit_set_2 > 99)
   {
-    for (uint8_t i = 0; i < 6; i++)
-      m_config.digit[i] = 0;
-    
+    m_config.reset();
     return false;
   }
 
@@ -93,6 +91,7 @@ DisplayDriver::run()
   uint8_t select_digit;
 
   // Select number bit (enable a number from 0-9)
+  // and add padding for digit bit
   select_num = 1 << (m_config.digit[m_digit_index] + 6);
   // Select digit bit (enable which digit 0-5 displays number)
   // Digit selection is inverted due to eletronic design
