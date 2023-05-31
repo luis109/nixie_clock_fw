@@ -1,5 +1,5 @@
-#ifndef SERVER_MANAGER_HPP
-#define SERVER_MANAGER_HPP
+#ifndef DISPLAY_DRIVER_HPP
+#define DISPLAY_DRIVER_HPP
 
 #include <Arduino.h>
 
