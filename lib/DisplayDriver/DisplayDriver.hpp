@@ -35,7 +35,12 @@ struct Timer
 
 struct DisplayConfig
 {
+  // Digits
   uint8_t digit[6];
+  // Right dots
+  bool rdot[6];
+  // Left dots
+  bool ldot[6];
 
   DisplayConfig()
   {
@@ -46,7 +51,22 @@ struct DisplayConfig
   reset()
   {
     for (uint8_t i = 0; i < 6; i++)
+    {
       digit[i] = 0;
+      rdot[i] = false;
+      ldot[i] = false;
+    }
+  }
+
+  void
+  resetDots()
+  {
+    for (uint8_t i = 0; i < 6; i++)
+    {
+      rdot[i] = false;
+      ldot[i] = false;
+    }
+
   }
 };
 
@@ -66,6 +86,12 @@ class DisplayDriver
     //! @return true if digits are set, false otherwise
     bool
     setDisplay(const uint8_t digit_set_0, const uint8_t digit_set_1, const uint8_t digit_set_2);
+
+    //! Set dot to display
+    //! @param digit digit to display dot (0 - 5)
+    //! @return true dot is set, false otherwise
+    bool
+    setDot(const uint8_t digit);
 
     //! Main display 
     void
@@ -89,6 +115,9 @@ class DisplayDriver
     Timer m_display_timer;
     //! Index for digit to display
     uint8_t m_digit_index;
+
+    void
+    resetHV2155();
 };
 
 #endif

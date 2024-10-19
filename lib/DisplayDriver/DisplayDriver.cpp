@@ -28,11 +28,23 @@ DisplayDriver::begin()
   pinMode(m_pin_data, OUTPUT);
   digitalWrite(m_pin_data, LOW);
 
+  resetHV2155();
+
   // Use the fastled library instead
   // pinMode(pin_led, OUTPUT);
   // digitalWrite(pin_led, LOW);
 
   m_display_timer.setTop(1000);
+}
+
+void
+DisplayDriver::resetHV2155()
+{
+  // Set HV2155 shifters to zero
+  digitalWrite(m_pin_enabled, LOW);
+  for (uint8_t i = 0; i < 4; i++)
+    shiftOut(m_pin_data, m_pin_clk, MSBFIRST, 0);
+  digitalWrite(m_pin_enabled, HIGH);
 }
 
 bool
@@ -56,29 +68,17 @@ DisplayDriver::setDisplay(const uint8_t digit_set_0, const uint8_t digit_set_1, 
   return true;
 }
 
-// void
-// DisplayDriver::run()
-// {
-//   // HV5122 control
-//   uint16_t select_num;
-//   uint8_t select_digit;
+bool
+DisplayDriver::setDot(const uint8_t digit)
+{
+  m_config.resetDots();
+  if (digit > 5)
+    return false;
+  
+  m_config.ldot[digit] = true;
 
-//   digitalWrite(pin_enabled, LOW);
-//   digitalWrite(pin_clk, HIGH);
-
-//   for (uint8_t i = 0; i < 6; i++)
-//   {
-//     select_num = 1 << (m_config.digit[i] + 6);
-//     select_digit = 1 << i;
-//     select_num |= select_digit;
-
-//     digitalWrite(pin_enabled, LOW);
-//     shiftOut(pin_data, pin_clk, MSBFIRST, select_num >> 8);
-//     shiftOut(pin_data, pin_clk, MSBFIRST, select_num & 0xff);
-//     digitalWrite(pin_enabled, HIGH);
-//     delay(1);
-//   }
-// }
+  return true;
+}
 
 void
 DisplayDriver::run()
@@ -87,20 +87,26 @@ DisplayDriver::run()
     return;
 
   // HV5122 control sets
-  uint16_t select_num;
-  uint8_t select_digit;
+  uint16_t select_num = 0;
+  uint8_t select_dot = 0;
 
+  // Switch left dot
+  if (m_config.ldot[m_digit_index])
+    select_dot |= 1 << 0;
+  // Switch right dot
+  if (m_config.rdot[m_digit_index])
+    select_dot |= 1 << 1;
   // Select number bit (enable a number from 0-9)
   // and add padding for digit bit
   select_num = 1 << (m_config.digit[m_digit_index] + 6);
   // Select digit bit (enable which digit 0-5 displays number)
   // Digit selection is inverted due to eletronic design
-  select_digit = 1 << 5 - m_digit_index;
-  // Join selection
-  select_num |= select_digit;
+  select_num |= 1 << 5 - m_digit_index;
 
   // Send to HV5122
   digitalWrite(m_pin_enabled, LOW);
+  shiftOut(m_pin_data, m_pin_clk, MSBFIRST, 0); // Can be ignored
+  shiftOut(m_pin_data, m_pin_clk, MSBFIRST, select_dot);
   shiftOut(m_pin_data, m_pin_clk, MSBFIRST, select_num >> 8);
   shiftOut(m_pin_data, m_pin_clk, MSBFIRST, select_num & 0xff);
   digitalWrite(m_pin_enabled, HIGH);
