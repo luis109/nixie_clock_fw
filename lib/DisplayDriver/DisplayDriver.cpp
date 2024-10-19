@@ -119,3 +119,34 @@ DisplayDriver::run()
 
   m_display_timer.reset();
 }
+
+void
+DisplayDriver::test()
+{
+  m_digit_index = 0;
+
+  // HV5122 control sets
+  uint16_t select_num = 0;
+  uint8_t select_dot = 0;
+
+  // Switch left dot
+  if (m_config.ldot[m_digit_index])
+    select_dot |= 1 << 0;
+  // Switch right dot
+  if (m_config.rdot[m_digit_index])
+    select_dot |= 1 << 1;
+  // Select number bit (enable a number from 0-9)
+  // and add padding for digit bit
+  select_num = 1 << (m_config.digit[m_digit_index] + 6);
+  // Select digit bit (enable which digit 0-5 displays number)
+  // Digit selection is inverted due to eletronic design
+  select_num |= 1 << 5 - m_digit_index;
+
+  // Send to HV5122
+  digitalWrite(m_pin_enabled, LOW);
+  shiftOut(m_pin_data, m_pin_clk, MSBFIRST, 0); // Can be ignored
+  shiftOut(m_pin_data, m_pin_clk, MSBFIRST, select_dot);
+  shiftOut(m_pin_data, m_pin_clk, MSBFIRST, select_num >> 8);
+  shiftOut(m_pin_data, m_pin_clk, MSBFIRST, select_num & 0xff);
+  digitalWrite(m_pin_enabled, HIGH);
+}

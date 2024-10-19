@@ -97,6 +97,10 @@ class DisplayDriver
     void
     run();
 
+    //! Test display 
+    void
+    test();
+
   private:
     //! Pins used for communicating with HV5122
     //! Enable pin
