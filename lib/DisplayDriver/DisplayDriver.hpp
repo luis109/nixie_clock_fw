@@ -2,6 +2,9 @@
 #define DISPLAY_DRIVER_HPP
 
 #include <Arduino.h>
+#include <FastLED.h>
+
+constexpr const uint8_t c_num_leds = 6;
 
 struct Timer
 {
@@ -41,6 +44,8 @@ struct DisplayConfig
   bool rdot[6];
   // Left dots
   bool ldot[6];
+  //! Array of leds
+  CRGB leds[c_num_leds];
 
   DisplayConfig()
   {
@@ -55,6 +60,7 @@ struct DisplayConfig
       digit[i] = 0;
       rdot[i] = false;
       ldot[i] = false;
+      leds[i] = CRGB::Black;
     }
   }
 
@@ -66,7 +72,13 @@ struct DisplayConfig
       rdot[i] = false;
       ldot[i] = false;
     }
+  }
 
+  void
+  resetLEDs()
+  {
+    for (uint8_t i = 0; i < 6; i++)
+      leds[i] = CRGB::Black;
   }
 };
 
@@ -92,6 +104,10 @@ class DisplayDriver
     //! @return true dot is set, false otherwise
     bool
     setDot(const uint8_t digit);
+
+    //! Set LED color to blue
+    void
+    setLEDBlue();
 
     //! Main display 
     void

@@ -30,6 +30,8 @@ DisplayDriver::begin()
 
   resetHV2155();
 
+  FastLED.addLeds<WS2812B, 26, RGB>(m_config.leds, c_num_leds);  // GRB ordering is typical
+
   // Use the fastled library instead
   // pinMode(pin_led, OUTPUT);
   // digitalWrite(pin_led, LOW);
@@ -44,7 +46,6 @@ DisplayDriver::resetHV2155()
   digitalWrite(m_pin_enabled, LOW);
   for (uint8_t i = 0; i < 4; i++)
     shiftOut(m_pin_data, m_pin_clk, MSBFIRST, 0);
-  digitalWrite(m_pin_enabled, HIGH);
 }
 
 bool
@@ -78,6 +79,14 @@ DisplayDriver::setDot(const uint8_t digit)
   m_config.ldot[digit] = true;
 
   return true;
+}
+
+void
+DisplayDriver::setLEDBlue()
+{
+ 
+  for (uint8_t i = 0; i < 6; i++)
+    m_config.leds[i] = CRGB::Blue;
 }
 
 void
@@ -149,4 +158,6 @@ DisplayDriver::test()
   shiftOut(m_pin_data, m_pin_clk, MSBFIRST, select_num >> 8);
   shiftOut(m_pin_data, m_pin_clk, MSBFIRST, select_num & 0xff);
   digitalWrite(m_pin_enabled, HIGH);
+
+  FastLED.show();
 }
