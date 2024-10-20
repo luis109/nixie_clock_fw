@@ -1,11 +1,6 @@
 #include "DisplayDriver.hpp"
 
-DisplayDriver::DisplayDriver(uint8_t pin_enabled, uint8_t pin_str, uint8_t pin_clk, uint8_t pin_data, uint8_t pin_led):
-  m_pin_enabled(pin_enabled),
-  m_pin_str(pin_str),
-  m_pin_clk(pin_clk),
-  m_pin_data(pin_data),
-  m_pin_led(pin_led),
+DisplayDriver::DisplayDriver():
   m_digit_index(0)
 {
   m_config.reset();
@@ -16,17 +11,17 @@ void
 DisplayDriver::begin()
 {
   // Set pin modes
-  pinMode(m_pin_enabled, OUTPUT);
-  digitalWrite(m_pin_enabled, LOW);
+  pinMode(DISPLAY_PIN_ENABLE, OUTPUT);
+  digitalWrite(DISPLAY_PIN_ENABLE, LOW);
 
-  pinMode(m_pin_str, OUTPUT);
-  digitalWrite(m_pin_str, HIGH);
+  pinMode(DISPLAY_PIN_STROBE, OUTPUT);
+  digitalWrite(DISPLAY_PIN_STROBE, HIGH);
 
-  pinMode(m_pin_clk, OUTPUT);
-  digitalWrite(m_pin_clk, LOW);
+  pinMode(DISPLAY_PIN_CLOCK, OUTPUT);
+  digitalWrite(DISPLAY_PIN_CLOCK, LOW);
 
-  pinMode(m_pin_data, OUTPUT);
-  digitalWrite(m_pin_data, LOW);
+  pinMode(DISPLAY_PIN_DATA, OUTPUT);
+  digitalWrite(DISPLAY_PIN_DATA, LOW);
 
   resetHV2155();
 
@@ -41,10 +36,10 @@ void
 DisplayDriver::resetHV2155()
 {
   // Set HV2155 shifters to zero
-  digitalWrite(m_pin_enabled, LOW);
+  digitalWrite(DISPLAY_PIN_ENABLE, LOW);
   for (uint8_t i = 0; i < 4; i++)
-    shiftOut(m_pin_data, m_pin_clk, MSBFIRST, 0);
-  digitalWrite(m_pin_enabled, HIGH);
+    shiftOut(DISPLAY_PIN_DATA, DISPLAY_PIN_CLOCK, MSBFIRST, 0);
+  digitalWrite(DISPLAY_PIN_ENABLE, HIGH);
 }
 
 bool
@@ -104,12 +99,12 @@ DisplayDriver::run()
   select_num |= 1 << 5 - m_digit_index;
 
   // Send to HV5122
-  digitalWrite(m_pin_enabled, LOW);
-  shiftOut(m_pin_data, m_pin_clk, MSBFIRST, 0); // Can be ignored
-  shiftOut(m_pin_data, m_pin_clk, MSBFIRST, select_dot);
-  shiftOut(m_pin_data, m_pin_clk, MSBFIRST, select_num >> 8);
-  shiftOut(m_pin_data, m_pin_clk, MSBFIRST, select_num & 0xff);
-  digitalWrite(m_pin_enabled, HIGH);
+  digitalWrite(DISPLAY_PIN_ENABLE, LOW);
+  shiftOut(DISPLAY_PIN_DATA, DISPLAY_PIN_CLOCK, MSBFIRST, 0); // Can be ignored
+  shiftOut(DISPLAY_PIN_DATA, DISPLAY_PIN_CLOCK, MSBFIRST, select_dot);
+  shiftOut(DISPLAY_PIN_DATA, DISPLAY_PIN_CLOCK, MSBFIRST, select_num >> 8);
+  shiftOut(DISPLAY_PIN_DATA, DISPLAY_PIN_CLOCK, MSBFIRST, select_num & 0xff);
+  digitalWrite(DISPLAY_PIN_ENABLE, HIGH);
 
   // Digit turnover
   if (m_digit_index == 5)

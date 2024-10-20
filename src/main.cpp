@@ -1,13 +1,8 @@
 #include <Arduino.h>
-#include "Definitions.hpp"
 #include "DisplayDriver.hpp"
 // #include "ServerManager.hpp"
 
-DisplayDriver g_ddriver(DISPLAY_PIN_ENABLE, 
-                        DISPLAY_PIN_STROBE, 
-                        DISPLAY_PIN_CLOCK,
-                        DISPLAY_PIN_DATA,
-                        DISPLAY_PIN_LED);
+DisplayDriver g_ddriver;
 
 
 // Initialize LittleFS
