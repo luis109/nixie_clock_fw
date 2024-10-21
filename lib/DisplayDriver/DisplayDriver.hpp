@@ -2,6 +2,7 @@
 #define DISPLAY_DRIVER_HPP
 
 #include <Arduino.h>
+#include <FastLED.h>
 #include "Timer.hpp"
 #include "DisplayDriverDefinitions.hpp"
 
@@ -28,6 +29,12 @@ class DisplayDriver
     bool
     setDot(const uint8_t digit);
 
+    //! Set LED color
+    //! @param color digit to display dot (0 - 5)
+    //! @return true dot is set, false otherwise
+    void
+    setColor(const CRGB::HTMLColorCode color);
+
     //! Main display 
     void
     run();
@@ -43,6 +50,8 @@ class DisplayDriver
       bool rdot[6];
       // Left dots
       bool ldot[6];
+      // LEDs
+      CRGB leds[DISPLAY_DIGIT_NUM];
 
       DisplayConfig()
       {
@@ -52,21 +61,31 @@ class DisplayDriver
       void
       reset()
       {
-        for (uint8_t i = 0; i < 6; i++)
+        for (uint8_t i = 0; i < DISPLAY_DIGIT_NUM; i++)
         {
           digit[i] = 0;
           rdot[i] = false;
           ldot[i] = false;
+          leds[i] = CRGB::Black;
         }
       }
 
       void
       resetDots()
       {
-        for (uint8_t i = 0; i < 6; i++)
+        for (uint8_t i = 0; i < DISPLAY_DIGIT_NUM; i++)
         {
           rdot[i] = false;
           ldot[i] = false;
+        }
+      }
+
+      void
+      resetLEDs()
+      {
+        for (uint8_t i = 0; i < DISPLAY_DIGIT_NUM; i++)
+        {
+          leds[i] = CRGB::Black;
         }
       }
     } m_config;

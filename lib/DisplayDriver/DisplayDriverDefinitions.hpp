@@ -7,4 +7,6 @@
 #define DISPLAY_PIN_DATA 25
 #define DISPLAY_PIN_LED 26
 
+#define DISPLAY_DIGIT_NUM 6
+
 #endif

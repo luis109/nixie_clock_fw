@@ -25,6 +25,7 @@ DisplayDriver::begin()
 
   resetHV2155();
 
+  FastLED.addLeds<WS2812B, DISPLAY_PIN_LED, RGB>(m_config.leds, DISPLAY_DIGIT_NUM);
   // Use the fastled library instead
   // pinMode(pin_led, OUTPUT);
   // digitalWrite(pin_led, LOW);
@@ -76,6 +77,15 @@ DisplayDriver::setDot(const uint8_t digit)
 }
 
 void
+DisplayDriver::setColor(const CRGB::HTMLColorCode color)
+{
+  for (uint8_t i = 0; i < DISPLAY_DIGIT_NUM; i++)
+  {
+    m_config.leds[i] = color;
+  }
+}
+
+void
 DisplayDriver::run()
 {
   if (!m_display_timer.overflow())
@@ -86,11 +96,9 @@ DisplayDriver::run()
   uint8_t select_dot = 0;
 
   // Switch left dot
-  if (m_config.ldot[m_digit_index])
-    select_dot |= 1 << 0;
+  select_dot |= m_config.ldot[m_digit_index] ? 1 : 0;
   // Switch right dot
-  if (m_config.rdot[m_digit_index])
-    select_dot |= 1 << 1;
+  select_dot |= m_config.rdot[m_digit_index] ? 1 << 1 : 0;
   // Select number bit (enable a number from 0-9)
   // and add padding for digit bit
   select_num = 1 << (m_config.digit[m_digit_index] + 6);
@@ -105,6 +113,9 @@ DisplayDriver::run()
   shiftOut(DISPLAY_PIN_DATA, DISPLAY_PIN_CLOCK, MSBFIRST, select_num >> 8);
   shiftOut(DISPLAY_PIN_DATA, DISPLAY_PIN_CLOCK, MSBFIRST, select_num & 0xff);
   digitalWrite(DISPLAY_PIN_ENABLE, HIGH);
+
+  // Send to LEDs
+  FastLED.show();
 
   // Digit turnover
   if (m_digit_index == 5)
