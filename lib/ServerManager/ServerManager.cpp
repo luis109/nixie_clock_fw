@@ -29,10 +29,11 @@ ServerManager::run()
   Serial.println(ip);
   Serial.println(gateway);
 
-  if(initWiFi()) {
+  if(initWiFi()) 
+  {
     // Route for root / web page
     server->on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
-      request->send(LittleFS, "/index.html", "text/html", false, processor);
+      request->send(LittleFS, "/index.html", "text/html", false, std::bind(&ServerManager::processor, this, std::placeholders::_1));
     });
     
     server->serveStatic("/", LittleFS, "/");
@@ -40,18 +41,19 @@ ServerManager::run()
     // Route to set GPIO state to HIGH
     server->on("/on", HTTP_GET, [this](AsyncWebServerRequest *request) {
       digitalWrite(ledPin, LOW);
-      request->send(LittleFS, "/index.html", "text/html", false, processor);
+      request->send(LittleFS, "/index.html", "text/html", false, std::bind(&ServerManager::processor, this, std::placeholders::_1));
     });
 
     // Route to set GPIO state to LOW
     server->on("/off", HTTP_GET, [this](AsyncWebServerRequest *request) {
       digitalWrite(ledPin, HIGH);
-      request->send(LittleFS, "/index.html", "text/html", false, processor);
+      request->send(LittleFS, "/index.html", "text/html", false, std::bind(&ServerManager::processor, this, std::placeholders::_1));
     });
     server->begin();
     Serial.println("Server started"); 
   }
-  else {
+  else 
+  {
     // Connect to Wi-Fi network with SSID and password
     Serial.println("Setting AP (Access Point)");
     // NULL sets an open Access Point
@@ -67,50 +69,8 @@ ServerManager::run()
     });
     
     server->serveStatic("/", LittleFS, "/");
-    
-    server->on("/", HTTP_POST, [this](AsyncWebServerRequest *request) {
-      int params = request->params();
-      for(int i=0;i<params;i++){
-        AsyncWebParameter* p = request->getParam(i);
-        if(p->isPost()){
-          // HTTP POST ssid value
-          if (p->name() == PARAM_INPUT_1) {
-            ssid = p->value().c_str();
-            Serial.print("SSID set to: ");
-            Serial.println(ssid);
-            // Write file to save value
-            writeFile(LittleFS, ssidPath, ssid.c_str());
-          }
-          // HTTP POST pass value
-          if (p->name() == PARAM_INPUT_2) {
-            pass = p->value().c_str();
-            Serial.print("Password set to: ");
-            Serial.println(pass);
-            // Write file to save value
-            writeFile(LittleFS, passPath, pass.c_str());
-          }
-          // HTTP POST ip value
-          if (p->name() == PARAM_INPUT_3) {
-            ip = p->value().c_str();
-            Serial.print("IP Address set to: ");
-            Serial.println(ip);
-            // Write file to save value
-            writeFile(LittleFS, ipPath, ip.c_str());
-          }
-          // HTTP POST gateway value
-          if (p->name() == PARAM_INPUT_4) {
-            gateway = p->value().c_str();
-            Serial.print("Gateway set to: ");
-            Serial.println(gateway);
-            // Write file to save value
-            writeFile(LittleFS, gatewayPath, gateway.c_str());
-          }
-          //Serial.printf("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
-        }
-      }
-      restart = true;
-      request->send(200, "text/plain", "Done. ESP will restart, connect to your router and go to IP address: " + ip);
-    });
+
+    server->on("/", HTTP_POST, std::bind(&ServerManager::wifiFormCallback, this, std::placeholders::_1));
     server->begin();
   }
 }
@@ -180,4 +140,51 @@ ServerManager::initWiFi()
 
   Serial.println(WiFi.localIP());
   return true;
+}
+
+ 
+void 
+ServerManager::wifiFormCallback(AsyncWebServerRequest *request)
+{
+  int params = request->params();
+  for(int i=0;i<params;i++){
+    AsyncWebParameter* p = request->getParam(i);
+    if(p->isPost()){
+      // HTTP POST ssid value
+      if (p->name() == PARAM_INPUT_1) {
+        ssid = p->value().c_str();
+        Serial.print("SSID set to: ");
+        Serial.println(ssid);
+        // Write file to save value
+        // writeFile(LittleFS, ssidPath, ssid.c_str());
+      }
+      // HTTP POST pass value
+      if (p->name() == PARAM_INPUT_2) {
+        pass = p->value().c_str();
+        Serial.print("Password set to: ");
+        Serial.println(pass);
+        // Write file to save value
+        // writeFile(LittleFS, passPath, pass.c_str());
+      }
+      // HTTP POST ip value
+      if (p->name() == PARAM_INPUT_3) {
+        ip = p->value().c_str();
+        Serial.print("IP Address set to: ");
+        Serial.println(ip);
+        // Write file to save value
+        // writeFile(LittleFS, ipPath, ip.c_str());
+      }
+      // HTTP POST gateway value
+      if (p->name() == PARAM_INPUT_4) {
+        gateway = p->value().c_str();
+        Serial.print("Gateway set to: ");
+        Serial.println(gateway);
+        // Write file to save value
+        // writeFile(LittleFS, gatewayPath, gateway.c_str());
+      }
+      //Serial.printf("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
+    }
+  }
+  restart = true;
+  request->send(200, "text/plain", "Done. ESP will restart, connect to your router and go to IP address: " + ip);
 }

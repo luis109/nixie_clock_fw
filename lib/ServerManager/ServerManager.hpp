@@ -4,31 +4,10 @@
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 #include "LittleFS.h"
+#include <functional>
 
 // Create AsyncWebServer object on port 80
 // AsyncWebServer server(80);
-
-
-// Set LED GPIO
-static const int ledPin = 2;
-// Stores LED state
-static String ledState;
-// Replaces placeholder with LED state value
-static String 
-processor(const String& var)
-{
-  if(var == "STATE") {
-      if(!digitalRead(ledPin)) {
-        ledState = "ON";
-      }
-      else {
-        ledState = "OFF";
-      }
-      return ledState;
-    }
-    return String();
-}
-
 class ServerManager
 {
 public:
@@ -65,19 +44,15 @@ private:
   const char* passPath = "/pass.txt";
   const char* ipPath = "/ip.txt";
   const char* gatewayPath = "/gateway.txt";
-
   IPAddress localIP;
-  //IPAddress localIP(192, 168, 1, 200); // hardcoded
-
   // Set your Gateway IP address
   IPAddress localGateway;
-  //IPAddress localGateway(192, 168, 1, 1); //hardcoded
   IPAddress subnet;
-
+  // Set LED GPIO
+  const int ledPin = 2;
   // Timer variables
   unsigned long previousMillis;
   const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
-
   bool restart;
 
   // Read File from LittleFS
@@ -91,6 +66,27 @@ private:
   // Initialize WiFi
   bool 
   initWiFi();
+
+  // Replaces placeholder with LED state value
+  String 
+  processor(const String& var)
+  {
+    if(var == "STATE") {
+      String ledState;
+        if(!digitalRead(ledPin)) {
+          ledState = "ON";
+        }
+        else {
+          ledState = "OFF";
+        }
+        return ledState;
+      }
+      return String();
+  }
+
+  //! Wifi form callback function
+  void 
+  wifiFormCallback(AsyncWebServerRequest *request);
 };
 
 #endif
