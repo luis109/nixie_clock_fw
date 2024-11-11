@@ -18,24 +18,15 @@ ServerManager::run()
   // Set GPIO 2 as an OUTPUT
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, LOW);
-  
-  // Load values saved in LittleFS
-  ssid = readFile(LittleFS, ssidPath);
-  pass = readFile(LittleFS, passPath);
-  ip = readFile(LittleFS, ipPath);
-  gateway = readFile (LittleFS, gatewayPath);
-  Serial.println(ssid);
-  Serial.println(pass);
-  Serial.println(ip);
-  Serial.println(gateway);
 
-  if(initWiFi()) 
+  initialize();
+
+  if(initWiFi())
   {
     // Route for root / web page
     server->on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
       request->send(LittleFS, "/index.html", "text/html", false, std::bind(&ServerManager::processor, this, std::placeholders::_1));
     });
-    
     server->serveStatic("/", LittleFS, "/");
     
     // Route to set GPIO state to HIGH
@@ -50,18 +41,17 @@ ServerManager::run()
       request->send(LittleFS, "/index.html", "text/html", false, std::bind(&ServerManager::processor, this, std::placeholders::_1));
     });
     server->begin();
-    Serial.println("Server started"); 
+    debug("Server started"); 
   }
   else 
   {
     // Connect to Wi-Fi network with SSID and password
-    Serial.println("Setting AP (Access Point)");
+    debug("Setting AP (Access Point)");
     // NULL sets an open Access Point
     WiFi.softAP("ESP-WIFI-MANAGER", NULL);
 
     IPAddress IP = WiFi.softAPIP();
-    Serial.print("AP IP address: ");
-    Serial.println(IP); 
+    debug("AP IP address: " + IP.toString() + "\n");
 
     // Web Server Root URL
     server->on("/", HTTP_GET, [this](AsyncWebServerRequest *request){
@@ -75,14 +65,28 @@ ServerManager::run()
   }
 }
 
+void
+ServerManager::initialize()
+{
+  // Serial port for debugging purposes
+#ifdef SERVER_MANAGER_DEBUG
+  Serial.begin(115200);
+#endif
+
+  // Initialize LittleFS
+  if (!LittleFS.begin())
+    debug("An error has occurred while mounting LittleFS\n");
+  else
+    debug("LittleFS mounted successfully\n");
+}
+
 String 
 ServerManager::readFile(fs::FS &fs, const char * path)
 {
-  Serial.printf("Reading file: %s\r\n", path);
-
+  debug("Reading file: " + String(path) + "\r\n");
   File file = fs.open(path, "r");
   if(!file || file.isDirectory()){
-    Serial.println("- failed to open file for reading");
+    debug("- failed to open file for reading");
     return String();
   }
 
@@ -98,26 +102,37 @@ ServerManager::readFile(fs::FS &fs, const char * path)
 void 
 ServerManager::writeFile(fs::FS &fs, const char * path, const char * message)
 {
-  Serial.printf("Writing file: %s\r\n", path);
+  debug("Writing file: " + String(path) + "\r\n");
 
   File file = fs.open(path, "w");
-  if(!file){
-    Serial.println("- failed to open file for writing");
+  if(!file)
+  {
+    debug("- failed to open file for writing");
     return;
   }
-  if(file.print(message)){
-    Serial.println("- file written");
-  } else {
-    Serial.println("- frite failed");
-  }
+  if(file.print(message))
+    debug("- file written");
+  else
+    debug("- frite failed");
   file.close();
 }
 
 bool 
 ServerManager::initWiFi()
 {
+  // Load values saved in LittleFS
+  String ssid = readFile(LittleFS, ssidPath);
+  String pass = readFile(LittleFS, passPath);
+  String ip = readFile(LittleFS, ipPath);
+  String gateway = readFile (LittleFS, gatewayPath);
+
+  debug("SSID: " + ssid + "\n");
+  debug("Password: " + pass + "\n");
+  debug("IP: " + ip + "\n");
+  debug("Gateway: " + gateway + "\n");
+
   if(ssid=="" || ip==""){
-    Serial.println("Undefined SSID or IP address.");
+    debug("Undefined SSID or IP address.");
     return false;
   }
 
@@ -126,19 +141,19 @@ ServerManager::initWiFi()
   localGateway.fromString(gateway.c_str());
 
   if (!WiFi.config(localIP, localGateway, subnet)){
-    Serial.println("STA Failed to configure");
+    debug("STA Failed to configure");
     return false;
   }
   WiFi.begin(ssid.c_str(), pass.c_str());
 
-  Serial.println("Connecting to WiFi...");
+  debug("Connecting to WiFi...");
   delay(20000);
   if(WiFi.status() != WL_CONNECTED) {
-    Serial.println("Failed to connect.");
+    debug("Failed to connect.");
     return false;
   }
 
-  Serial.println(WiFi.localIP());
+  debug(WiFi.localIP().toString());
   return true;
 }
 
@@ -147,42 +162,47 @@ void
 ServerManager::wifiFormCallback(AsyncWebServerRequest *request)
 {
   int params = request->params();
+  String ssid;
+  String pass;
+  String ip;
+  String gateway;
+
   for(int i=0;i<params;i++){
     AsyncWebParameter* p = request->getParam(i);
     if(p->isPost()){
       // HTTP POST ssid value
-      if (p->name() == PARAM_INPUT_1) {
+      if (p->name() == WIFI_FORM_SSID_PARAM) 
+      {
         ssid = p->value().c_str();
-        Serial.print("SSID set to: ");
-        Serial.println(ssid);
         // Write file to save value
-        // writeFile(LittleFS, ssidPath, ssid.c_str());
+        writeFile(LittleFS, ssidPath, ssid.c_str());
+        debug("SSID set to: " + ssid + "\n");
       }
       // HTTP POST pass value
-      if (p->name() == PARAM_INPUT_2) {
+      if (p->name() == WIFI_FORM_PASS_PARAM) 
+      {
         pass = p->value().c_str();
-        Serial.print("Password set to: ");
-        Serial.println(pass);
         // Write file to save value
-        // writeFile(LittleFS, passPath, pass.c_str());
+        writeFile(LittleFS, passPath, pass.c_str());
+        debug("Password set to: " + pass + "\n");
       }
       // HTTP POST ip value
-      if (p->name() == PARAM_INPUT_3) {
+      if (p->name() == WIFI_FORM_IP_PARAM) 
+      {
         ip = p->value().c_str();
-        Serial.print("IP Address set to: ");
-        Serial.println(ip);
         // Write file to save value
-        // writeFile(LittleFS, ipPath, ip.c_str());
+        writeFile(LittleFS, ipPath, ip.c_str());
+        debug("IP Address set to: " + ip + "\n");
       }
       // HTTP POST gateway value
-      if (p->name() == PARAM_INPUT_4) {
+      if (p->name() == WIFI_FORM_GATEWAY_PARAM) 
+      {
         gateway = p->value().c_str();
-        Serial.print("Gateway set to: ");
-        Serial.println(gateway);
         // Write file to save value
-        // writeFile(LittleFS, gatewayPath, gateway.c_str());
+        writeFile(LittleFS, gatewayPath, gateway.c_str());
+        debug("Gateway set to: " + gateway + "\n");
       }
-      //Serial.printf("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
+      debug("POST[" + p->name() + "]: " + p->value() + "\n");
     }
   }
   restart = true;

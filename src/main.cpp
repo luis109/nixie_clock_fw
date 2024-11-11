@@ -7,22 +7,7 @@
 
 ServerManager g_ws_manager;
 
-// Initialize LittleFS
-void initFS() {
-  if (!LittleFS.begin()) {
-    Serial.println("An error has occurred while mounting LittleFS");
-  }
-  else{
-    Serial.println("LittleFS mounted successfully");
-  }
-}
-
 void setup() {
-  // Serial port for debugging purposes
-  Serial.begin(115200);
-
-  initFS();
-
   g_ws_manager.run();
 }
 

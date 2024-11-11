@@ -6,8 +6,7 @@
 #include "LittleFS.h"
 #include <functional>
 
-// Create AsyncWebServer object on port 80
-// AsyncWebServer server(80);
+// #define SERVER_MANAGER_DEBUG
 class ServerManager
 {
 public:
@@ -28,16 +27,10 @@ private:
   AsyncWebServer* server;
   
   // Search for parameter in HTTP POST request
-  const char* PARAM_INPUT_1 = "ssid";
-  const char* PARAM_INPUT_2 = "pass";
-  const char* PARAM_INPUT_3 = "ip";
-  const char* PARAM_INPUT_4 = "gateway";
-
-  //Variables to save values from HTML form
-  String ssid;
-  String pass;
-  String ip;
-  String gateway;
+  const char* WIFI_FORM_SSID_PARAM = "ssid";
+  const char* WIFI_FORM_PASS_PARAM = "pass";
+  const char* WIFI_FORM_IP_PARAM = "ip";
+  const char* WIFI_FORM_GATEWAY_PARAM = "gateway";
 
   // File paths to save input values permanently
   const char* ssidPath = "/ssid.txt";
@@ -87,6 +80,18 @@ private:
   //! Wifi form callback function
   void 
   wifiFormCallback(AsyncWebServerRequest *request);
+
+  //! Initialize Serial and LittleFS
+  void
+  initialize();
+
+  void
+  debug(const String& str)
+  {
+#ifdef SERVER_MANAGER_DEBUG
+      Serial.print(str);
+#endif    
+  }
 };
 
 #endif
