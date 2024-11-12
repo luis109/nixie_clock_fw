@@ -6,7 +6,7 @@
 #include "LittleFS.h"
 #include <functional>
 
-// #define SERVER_MANAGER_DEBUG
+#define SERVER_MANAGER_DEBUG
 class ServerManager
 {
 public:
@@ -47,6 +47,8 @@ private:
   unsigned long previousMillis;
   const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
   bool restart;
+  // List of networks
+  std::vector<String> m_network_list;
 
   // Read File from LittleFS
   String 
@@ -81,9 +83,38 @@ private:
   void 
   wifiFormCallback(AsyncWebServerRequest *request);
 
+  // Creates list of networks dropdown
+  String 
+  wifiFormProcessor(const String& var)
+  {
+    if(var == "NETWORK_LIST") 
+    {
+      String options;
+      for (int i = 0; i < m_network_list.size(); ++i)
+        options += "<option value=\"" + m_network_list[i] + "\">" + m_network_list[i] + "</option>\n";
+
+      return options;
+    }
+
+    return String();
+  }
+
   //! Initialize Serial and LittleFS
   void
   initialize();
+
+  void
+  scanNetworks()
+  {
+    m_network_list.clear();
+    int n = WiFi.scanNetworks();
+    debug(String(n) + " networks found:\n");
+    for (int i = 0; i < n; ++i)
+    {
+      m_network_list.push_back(WiFi.SSID(i));
+      debug(m_network_list[i] + "\n");
+    }
+  }
 
   void
   debug(const String& str)

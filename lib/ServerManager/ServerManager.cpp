@@ -41,21 +41,24 @@ ServerManager::run()
       request->send(LittleFS, "/index.html", "text/html", false, std::bind(&ServerManager::processor, this, std::placeholders::_1));
     });
     server->begin();
-    debug("Server started"); 
+    debug("Server started\n"); 
   }
   else 
   {
     // Connect to Wi-Fi network with SSID and password
-    debug("Setting AP (Access Point)");
+    debug("Setting AP (Access Point)\n");
     // NULL sets an open Access Point
     WiFi.softAP("ESP-WIFI-MANAGER", NULL);
 
     IPAddress IP = WiFi.softAPIP();
     debug("AP IP address: " + IP.toString() + "\n");
 
+    debug("**Scanning Networks**\n");
+    scanNetworks();
+
     // Web Server Root URL
     server->on("/", HTTP_GET, [this](AsyncWebServerRequest *request){
-      request->send(LittleFS, "/wifimanager.html", "text/html");
+      request->send(LittleFS, "/wifimanager.html", "text/html", false, std::bind(&ServerManager::wifiFormProcessor, this, std::placeholders::_1));
     });
     
     server->serveStatic("/", LittleFS, "/");
