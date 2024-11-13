@@ -50,6 +50,7 @@ private:
   // Set your Gateway IP address
   IPAddress localGateway;
   IPAddress subnet;
+  IPAddress dns;
   // Set LED GPIO
   const int ledPin = 2;
   // Timer variables

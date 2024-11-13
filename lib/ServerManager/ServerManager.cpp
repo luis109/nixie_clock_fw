@@ -161,7 +161,7 @@ ServerManager::initWiFi()
   localIP.fromString(ip.c_str());
   localGateway.fromString(gateway.c_str());
 
-  if (!WiFi.config(localIP, localGateway, subnet)){
+  if (!WiFi.config(localIP, localGateway, subnet, dns)){
     debug("STA Failed to configure");
     return false;
   }
