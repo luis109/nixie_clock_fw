@@ -29,7 +29,10 @@ public:
 
   // Update variable values
   void
-  updateValues(float a, float b, float c, float d);
+  updateTimeString(const String& time_str)
+  {
+    m_time_str = time_str;
+  }
 
 private:
   AsyncWebServer* server;
@@ -51,19 +54,13 @@ private:
   IPAddress localGateway;
   IPAddress subnet;
   IPAddress dns;
-  // Set LED GPIO
-  const int ledPin = 2;
   // Timer variables
-  unsigned long previousMillis;
   const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
   bool restart;
   // List of networks
   std::vector<String> m_network_list;
-  // Test values
-  float temperature;
-  float humidity;
-  float pressure;
-  float gasResistance;
+  // Time string
+  String m_time_str;
 
   // Read File from LittleFS
   String 
@@ -81,18 +78,8 @@ private:
   String 
   processor(const String& var)
   {
-    if(var == "TEMPERATURE"){
-      return String(temperature);
-    }
-    else if(var == "HUMIDITY"){
-      return String(humidity);
-    }
-    else if(var == "PRESSURE"){
-      return String(pressure);
-    }
-    else if(var == "GAS"){
-      return String(gasResistance);
-    }
+    if(var == "CURR_TIME")
+      return m_time_str;
 
     return String();
   }

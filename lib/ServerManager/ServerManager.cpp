@@ -4,8 +4,9 @@ ServerManager::ServerManager():
   server(new AsyncWebServer(80)),
   events(new AsyncEventSource("/events")),
   subnet(IPAddress(255, 255, 0, 0)),
+  dns(IPAddress(8, 8, 8, 8)),
   restart(false),
-  previousMillis(0)
+  m_time_str(String())
 { }
 
 ServerManager::~ServerManager()
@@ -69,21 +70,8 @@ void
 ServerManager::run()
 {
   // Send Events to the Web Server with the Sensor Readings
-  events->send("ping",NULL,millis());
-  events->send(String(temperature).c_str(),"temperature",millis());
-  events->send(String(humidity).c_str(),"humidity",millis());
-  events->send(String(pressure).c_str(),"pressure",millis());
-  events->send(String(gasResistance).c_str(),"gas",millis());
-}
-
-
-void
-ServerManager::updateValues(float a, float b, float c, float d)
-{
-  temperature = a;
-  humidity = b;
-  pressure = c;
-  gasResistance = d;
+  events->send("ping", NULL, millis());
+  events->send(m_time_str.c_str(), "curr_time", millis());
 }
 
 void
@@ -168,7 +156,7 @@ ServerManager::initWiFi()
   WiFi.begin(ssid.c_str(), pass.c_str());
 
   debug("Connecting to WiFi...");
-  delay(20000);
+  delay(interval);
   if(WiFi.status() != WL_CONNECTED) {
     debug("Failed to connect.");
     return false;

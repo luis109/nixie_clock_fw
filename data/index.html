@@ -12,26 +12,10 @@
 
 <body>
   <div class="topnav">
-    <h3>BME680 WEB SERVER</h3>
+    <h3>Internet Nixie Clock</h3>
   </div>
   <div class="content">
-    <div class="cards">
-      <div class="card temperature">
-        <h4><i class="fas fa-thermometer-half"></i> TEMPERATURE</h4>
-        <p><span class="reading"><span id="temp">%TEMPERATURE%</span> &deg;C</span></p>
-      </div>
-      <div class="card humidity">
-        <h4><i class="fas fa-tint"></i> HUMIDITY</h4>
-        <p><span class="reading"><span id="hum">%HUMIDITY%</span> &percnt;</span></p>
-      </div>
-      <div class="card pressure">
-        <h4><i class="fas fa-angle-double-down"></i> PRESSURE</h4>
-        <p><span class="reading"><span id="pres">%PRESSURE%</span> hPa</span></p>
-      </div>
-      <div class="card gas">
-        <h4><i class="fas fa-wind"></i> GAS</h4>
-        <p><span class="reading"><span id="gas">%GAS%</span> K&ohm;</span></p>
-      </div>
+      <h4><span class="reading"><span id="curr_time">%CURR_TIME%</span></span></h4>
     </div>
   </div>
   <script>
@@ -51,24 +35,9 @@
         console.log("message", e.data);
       }, false);
 
-      source.addEventListener('temperature', function (e) {
-        console.log("temperature", e.data);
-        document.getElementById("temp").innerHTML = e.data;
-      }, false);
-
-      source.addEventListener('humidity', function (e) {
-        console.log("humidity", e.data);
-        document.getElementById("hum").innerHTML = e.data;
-      }, false);
-
-      source.addEventListener('pressure', function (e) {
-        console.log("pressure", e.data);
-        document.getElementById("pres").innerHTML = e.data;
-      }, false);
-
-      source.addEventListener('gas', function (e) {
-        console.log("gas", e.data);
-        document.getElementById("gas").innerHTML = e.data;
+      source.addEventListener('curr_time', function (e) {
+        console.log("curr_time", e.data);
+        document.getElementById("curr_time").innerHTML = e.data;
       }, false);
     }
   </script>
