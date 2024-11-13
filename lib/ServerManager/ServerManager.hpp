@@ -13,7 +13,11 @@ public:
     ServerManager();
     ~ServerManager();
 
-  // Run webserver (webserver main)
+  // Begin webserver
+  void 
+  begin();
+
+  // Handle events
   void 
   run();
 
@@ -23,8 +27,13 @@ public:
     return restart;
   }
 
+  // Update variable values
+  void
+  updateValues(float a, float b, float c, float d);
+
 private:
   AsyncWebServer* server;
+  AsyncEventSource* events;
   
   // Search for parameter in HTTP POST request
   const char* WIFI_FORM_SSID_PARAM = "ssid";
@@ -49,6 +58,11 @@ private:
   bool restart;
   // List of networks
   std::vector<String> m_network_list;
+  // Test values
+  float temperature;
+  float humidity;
+  float pressure;
+  float gasResistance;
 
   // Read File from LittleFS
   String 
@@ -66,17 +80,20 @@ private:
   String 
   processor(const String& var)
   {
-    if(var == "STATE") {
-      String ledState;
-        if(!digitalRead(ledPin)) {
-          ledState = "ON";
-        }
-        else {
-          ledState = "OFF";
-        }
-        return ledState;
-      }
-      return String();
+    if(var == "TEMPERATURE"){
+      return String(temperature);
+    }
+    else if(var == "HUMIDITY"){
+      return String(humidity);
+    }
+    else if(var == "PRESSURE"){
+      return String(pressure);
+    }
+    else if(var == "GAS"){
+      return String(gasResistance);
+    }
+
+    return String();
   }
 
   //! Wifi form callback function

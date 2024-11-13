@@ -2,6 +2,7 @@
 
 ServerManager::ServerManager():
   server(new AsyncWebServer(80)),
+  events(new AsyncEventSource("/events")),
   subnet(IPAddress(255, 255, 0, 0)),
   restart(false),
   previousMillis(0)
@@ -9,18 +10,14 @@ ServerManager::ServerManager():
 
 ServerManager::~ServerManager()
 {
+  delete events;
   delete server;
 }
 
 void 
-ServerManager::run()
+ServerManager::begin()
 {
-  // Set GPIO 2 as an OUTPUT
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, LOW);
-
   initialize();
-
   if(initWiFi())
   {
     // Route for root / web page
@@ -29,17 +26,17 @@ ServerManager::run()
     });
     server->serveStatic("/", LittleFS, "/");
     
-    // Route to set GPIO state to HIGH
-    server->on("/on", HTTP_GET, [this](AsyncWebServerRequest *request) {
-      digitalWrite(ledPin, LOW);
-      request->send(LittleFS, "/index.html", "text/html", false, std::bind(&ServerManager::processor, this, std::placeholders::_1));
+    // Handle Web Server Events
+    events->onConnect([this](AsyncEventSourceClient *client){
+      if(client->lastId()){
+        debug("Client reconnected! Last message ID that it got is:" + String(client->lastId())+ "\n");
+      }
+      // send event with message "hello!", id current millis
+      // and set reconnect delay to 1 second
+      client->send("hello!", NULL, millis(), 10000);
     });
-
-    // Route to set GPIO state to LOW
-    server->on("/off", HTTP_GET, [this](AsyncWebServerRequest *request) {
-      digitalWrite(ledPin, HIGH);
-      request->send(LittleFS, "/index.html", "text/html", false, std::bind(&ServerManager::processor, this, std::placeholders::_1));
-    });
+    
+    server->addHandler(events);
     server->begin();
     debug("Server started\n"); 
   }
@@ -66,6 +63,27 @@ ServerManager::run()
     server->on("/", HTTP_POST, std::bind(&ServerManager::wifiFormCallback, this, std::placeholders::_1));
     server->begin();
   }
+}
+
+void 
+ServerManager::run()
+{
+  // Send Events to the Web Server with the Sensor Readings
+  events->send("ping",NULL,millis());
+  events->send(String(temperature).c_str(),"temperature",millis());
+  events->send(String(humidity).c_str(),"humidity",millis());
+  events->send(String(pressure).c_str(),"pressure",millis());
+  events->send(String(gasResistance).c_str(),"gas",millis());
+}
+
+
+void
+ServerManager::updateValues(float a, float b, float c, float d)
+{
+  temperature = a;
+  humidity = b;
+  pressure = c;
+  gasResistance = d;
 }
 
 void
