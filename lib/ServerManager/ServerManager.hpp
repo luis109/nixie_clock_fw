@@ -88,38 +88,9 @@ private:
   void 
   wifiFormCallback(AsyncWebServerRequest *request);
 
-  // Creates list of networks dropdown
-  String 
-  wifiFormProcessor(const String& var)
-  {
-    if(var == "NETWORK_LIST") 
-    {
-      String options;
-      for (int i = 0; i < m_network_list.size(); ++i)
-        options += "<option value=\"" + m_network_list[i] + "\">" + m_network_list[i] + "</option>\n";
-
-      return options;
-    }
-
-    return String();
-  }
-
   //! Initialize Serial and LittleFS
   void
   initialize();
-
-  void
-  scanNetworks()
-  {
-    m_network_list.clear();
-    int n = WiFi.scanNetworks();
-    debug(String(n) + " networks found:\n");
-    for (int i = 0; i < n; ++i)
-    {
-      m_network_list.push_back(WiFi.SSID(i));
-      debug(m_network_list[i] + "\n");
-    }
-  }
 
   void
   debug(const String& str)
