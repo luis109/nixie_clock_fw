@@ -45,49 +45,19 @@ ServerManager::begin()
   {
     // Connect to Wi-Fi network with SSID and password
     debug("Setting AP (Access Point)\n");
-    // NULL sets an open Access Point
     WiFi.softAP("ESP-WIFI-MANAGER", NULL);
 
     IPAddress IP = WiFi.softAPIP();
     debug("AP IP address: " + IP.toString() + "\n");
-
     debug("**Start Network Scan**\n");
     WiFi.scanNetworks(true);
-    // scanNetworks();
 
     // Web Server Root URL
     server->on("/", HTTP_GET, [this](AsyncWebServerRequest *request){
       request->send(LittleFS, "/wifimanager.html", "text/html");
     });
-    
     server->serveStatic("/", LittleFS, "/");
-
-    server->on("/scan", HTTP_GET, [this](AsyncWebServerRequest *request){
-      String json = "[";
-      int n = WiFi.scanComplete();
-      if(n == -2){
-        WiFi.scanNetworks(true);
-      } else if(n){
-        for (int i = 0; i < n; ++i){
-          if(i) json += ",";
-          json += "{";
-          json += "\"rssi\":"+String(WiFi.RSSI(i));
-          json += ",\"ssid\":\""+WiFi.SSID(i)+"\"";
-          json += ",\"bssid\":\""+WiFi.BSSIDstr(i)+"\"";
-          json += ",\"channel\":"+String(WiFi.channel(i));
-          json += ",\"secure\":"+String(WiFi.encryptionType(i));
-          json += "}";
-        }
-        WiFi.scanDelete();
-        if(WiFi.scanComplete() == -2){
-          WiFi.scanNetworks(true);
-        }
-      }
-      json += "]";
-      request->send(200, "application/json", json);
-      json = String();
-    });
-
+    server->on("/scan", HTTP_GET, std::bind(&ServerManager::wifiFormScanNetworks, this, std::placeholders::_1));
     server->on("/", HTTP_POST, std::bind(&ServerManager::wifiFormCallback, this, std::placeholders::_1));
     server->begin();
   }
@@ -193,7 +163,35 @@ ServerManager::initWiFi()
   return true;
 }
 
- 
+
+void 
+ServerManager::wifiFormScanNetworks(AsyncWebServerRequest *request)
+{
+  String json = "[";
+  int n = WiFi.scanComplete();
+  if(n == -2){
+    WiFi.scanNetworks(true);
+  } else if(n){
+    for (int i = 0; i < n; ++i){
+      if(i) json += ",";
+      json += "{";
+      json += "\"rssi\":"+String(WiFi.RSSI(i));
+      json += ",\"ssid\":\""+WiFi.SSID(i)+"\"";
+      json += ",\"bssid\":\""+WiFi.BSSIDstr(i)+"\"";
+      json += ",\"channel\":"+String(WiFi.channel(i));
+      json += ",\"secure\":"+String(WiFi.encryptionType(i));
+      json += "}";
+    }
+    WiFi.scanDelete();
+    if(WiFi.scanComplete() == -2){
+      WiFi.scanNetworks(true);
+    }
+  }
+  json += "]";
+  request->send(200, "application/json", json);
+  json = String();
+}
+
 void 
 ServerManager::wifiFormCallback(AsyncWebServerRequest *request)
 {

@@ -83,6 +83,9 @@ private:
 
     return String();
   }
+  //! Wifi form scan networks function
+  void 
+  wifiFormScanNetworks(AsyncWebServerRequest *request);
 
   //! Wifi form callback function
   void 
