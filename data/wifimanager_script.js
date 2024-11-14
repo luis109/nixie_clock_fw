@@ -29,7 +29,10 @@ function createNetworkOptions(jsonNetworks) {
     while (select.hasChildNodes())
       select.removeChild(select.firstChild);
 
-    for (var i = 0; i<=keys.length; i++){
+    var empty_opt = document.createElement('option');
+    select.appendChild(empty_opt);
+
+    for (var i = 0; i < keys.length; i++){
         var opt = document.createElement('option');
         opt.value = jsonNetworks[keys[i]].ssid;
         opt.innerHTML = jsonNetworks[keys[i]].ssid;
