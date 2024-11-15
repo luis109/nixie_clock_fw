@@ -3,9 +3,7 @@
 ServerManager::ServerManager():
   server(new AsyncWebServer(80)),
   events(new AsyncEventSource("/events")),
-  subnet(IPAddress(255, 255, 0, 0)),
-  dns(IPAddress(8, 8, 8, 8)),
-  restart(false),
+  m_restart(false),
   m_time_str(String())
 { }
 
@@ -142,12 +140,16 @@ ServerManager::initWiFi()
   String ssid = readFile(LittleFS, ssidPath);
   String pass = readFile(LittleFS, passPath);
   String ip = readFile(LittleFS, ipPath);
-  String gateway = readFile (LittleFS, gatewayPath);
+  String gateway = readFile(LittleFS, gatewayPath);
+  String subnet = readFile(LittleFS, subnetPath);
+  String dns = readFile(LittleFS, dnsPath);
 
   debug("SSID: " + ssid + "\n");
   debug("Password: " + pass + "\n");
   debug("IP: " + ip + "\n");
   debug("Gateway: " + gateway + "\n");
+  debug("Subnet mask: " + subnet + "\n");
+  debug("DNS: " + dns + "\n");
 
   if(ssid=="" || ip==""){
     debug("Undefined SSID or IP address.");
@@ -155,10 +157,16 @@ ServerManager::initWiFi()
   }
 
   WiFi.mode(WIFI_STA);
+  IPAddress localIP;
   localIP.fromString(ip.c_str());
+  IPAddress localGateway;
   localGateway.fromString(gateway.c_str());
+  IPAddress localSubnet; 
+  localSubnet.fromString(subnet);
+  IPAddress localDNS;
+  localDNS.fromString(dns);
 
-  if (!WiFi.config(localIP, localGateway, subnet, dns)){
+  if (!WiFi.config(localIP, localGateway, localSubnet, localDNS)){
     debug("STA Failed to configure");
     return false;
   }
@@ -232,50 +240,52 @@ void
 ServerManager::wifiFormCallback(AsyncWebServerRequest *request)
 {
   int params = request->params();
-  String ssid;
-  String pass;
-  String ip;
-  String gateway;
 
+  String ip;
   for(int i=0;i<params;i++){
     AsyncWebParameter* p = request->getParam(i);
     if(p->isPost()){
       // HTTP POST ssid value
       if (p->name() == WIFI_FORM_SSID_PARAM) 
       {
-        ssid = p->value().c_str();
-        // Write file to save value
-        writeFile(LittleFS, ssidPath, ssid.c_str());
-        debug("SSID set to: " + ssid + "\n");
+        writeFile(LittleFS, ssidPath, p->value().c_str());
+        debug("SSID set to: " + String(p->value().c_str()) + "\n");
       }
       // HTTP POST pass value
       if (p->name() == WIFI_FORM_PASS_PARAM) 
       {
-        pass = p->value().c_str();
-        // Write file to save value
-        writeFile(LittleFS, passPath, pass.c_str());
-        debug("Password set to: " + pass + "\n");
+        writeFile(LittleFS, passPath, p->value().c_str());
+        debug("Password set to: " + String(p->value().c_str()) + "\n");
       }
       // HTTP POST ip value
       if (p->name() == WIFI_FORM_IP_PARAM) 
       {
         ip = p->value().c_str();
-        // Write file to save value
-        writeFile(LittleFS, ipPath, ip.c_str());
-        debug("IP Address set to: " + ip + "\n");
+        writeFile(LittleFS, ipPath, p->value().c_str());
+        debug("IP Address set to: " + String(p->value().c_str()) + "\n");
       }
       // HTTP POST gateway value
       if (p->name() == WIFI_FORM_GATEWAY_PARAM) 
       {
-        gateway = p->value().c_str();
-        // Write file to save value
-        writeFile(LittleFS, gatewayPath, gateway.c_str());
-        debug("Gateway set to: " + gateway + "\n");
+        writeFile(LittleFS, gatewayPath, p->value().c_str());
+        debug("Gateway set to: " + String(p->value().c_str()) + "\n");
+      }
+      // HTTP POST subnet value
+      if (p->name() == WIFI_FORM_SUBNET_PARAM) 
+      {
+        writeFile(LittleFS, subnetPath, p->value().c_str());
+        debug("Subnet set to: " + String(p->value().c_str()) + "\n");
+      }
+      // HTTP POST subnet value
+      if (p->name() == WIFI_FORM_DNS_PARAM) 
+      {
+        writeFile(LittleFS, dnsPath, p->value().c_str());
+        debug("DNS set to: " + String(p->value().c_str()) + "\n");
       }
       debug("POST[" + p->name() + "]: " + p->value() + "\n");
     }
   }
-  restart = true;
+  m_restart = true;
   request->send(200, "text/plain", "Done. ESP will restart, connect to your router and go to IP address: " + ip);
 }
 

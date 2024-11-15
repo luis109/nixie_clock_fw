@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
-#include "LittleFS.h"
+#include <LittleFS.h>
 #include <functional>
 
 #define SERVER_MANAGER_DEBUG
@@ -25,7 +25,7 @@ public:
   bool
   dev_restart()
   {
-    return restart;
+    return m_restart;
   }
 
   // Update variable values
@@ -39,30 +39,33 @@ private:
   AsyncWebServer* server;
   AsyncEventSource* events;
   
-  // Search for parameter in HTTP POST request
+  //! HTTP POST request parameters
+  //! Wifi manager
   const char* WIFI_FORM_SSID_PARAM = "ssid";
   const char* WIFI_FORM_PASS_PARAM = "pass";
   const char* WIFI_FORM_IP_PARAM = "ip";
   const char* WIFI_FORM_GATEWAY_PARAM = "gateway";
+  const char* WIFI_FORM_SUBNET_PARAM = "subnet";
+  const char* WIFI_FORM_DNS_PARAM = "dns";
+  //! Settings
   const char* TIMEZONE_FORM_TIMEZONE_PARAM = "timezone_setting";
 
-  // File paths to save input values permanently
+  //! File paths to save input values permanently
+  //! Wifi manager form
   const char* ssidPath = "/ssid.txt";
   const char* passPath = "/pass.txt";
   const char* ipPath = "/ip.txt";
   const char* gatewayPath = "/gateway.txt";
+  const char* subnetPath = "/subnet.txt";
+  const char* dnsPath = "/dns.txt";
+  //! Time settings
   const char* timezonesPath = "/zones.json";
   const char* timezonePath = "/timezone.txt";
-  IPAddress localIP;
-  // Set your Gateway IP address
-  IPAddress localGateway;
-  IPAddress subnet;
-  IPAddress dns;
+  
   // Timer variables
   const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
-  bool restart;
-  // List of networks
-  std::vector<String> m_network_list;
+  //! Restart ESP flag
+  bool m_restart;
   //! Map of timezones
   JsonDocument m_timezones;
   String m_curr_timezone;
@@ -70,23 +73,23 @@ private:
   // Time string
   String m_time_str;
 
-  // Read File from LittleFS
+  //! Read File from LittleFS
   String 
   readFile(fs::FS &fs, const char * path, bool singleLine = true);
 
-  // Write file to LittleFS
+  //! Write file to LittleFS
   void 
   writeFile(fs::FS &fs, const char * path, const char * message);
 
-  // Initialize WiFi
+  //! Initialize WiFi
   bool 
   initWiFi();
 
-  // Replaces placeholder with LED state value
+  //! Replaces placeholder with LED state value
   String 
   mainPageProcessor(const String& var);
 
-  // Timezone form callback, to set timezone settings
+  //! Timezone form callback, to set timezone settings
   void
   timezoneFormCallback(AsyncWebServerRequest *request);
   
