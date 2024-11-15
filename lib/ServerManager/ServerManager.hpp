@@ -2,6 +2,7 @@
 #define SERVER_MANAGER_HPP
 
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 #include "LittleFS.h"
 #include <functional>
@@ -49,6 +50,7 @@ private:
   const char* passPath = "/pass.txt";
   const char* ipPath = "/ip.txt";
   const char* gatewayPath = "/gateway.txt";
+  const char* timezonePath = "/zones.json";
   IPAddress localIP;
   // Set your Gateway IP address
   IPAddress localGateway;
@@ -59,12 +61,14 @@ private:
   bool restart;
   // List of networks
   std::vector<String> m_network_list;
+  //! Map of timezones
+  JsonDocument m_timezones;
   // Time string
   String m_time_str;
 
   // Read File from LittleFS
   String 
-  readFile(fs::FS &fs, const char * path);
+  readFile(fs::FS &fs, const char * path, bool singleLine = true);
 
   // Write file to LittleFS
   void 
@@ -76,13 +80,8 @@ private:
 
   // Replaces placeholder with LED state value
   String 
-  processor(const String& var)
-  {
-    if(var == "CURR_TIME")
-      return m_time_str;
-
-    return String();
-  }
+  mainPageProcessor(const String& var);
+  
   //! Wifi form scan networks function
   void 
   wifiFormScanNetworks(AsyncWebServerRequest *request);
@@ -102,6 +101,9 @@ private:
       Serial.print(str);
 #endif    
   }
+
+  void
+  getTimezones();
 };
 
 #endif

@@ -19,11 +19,12 @@ void
 ServerManager::begin()
 {
   initialize();
+
   if(initWiFi())
   {
     // Route for root / web page
     server->on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
-      request->send(LittleFS, "/index.html", "text/html", false, std::bind(&ServerManager::processor, this, std::placeholders::_1));
+      request->send(LittleFS, "/index.html", "text/html", false, std::bind(&ServerManager::mainPageProcessor, this, std::placeholders::_1));
     });
     server->serveStatic("/", LittleFS, "/");
     
@@ -84,10 +85,13 @@ ServerManager::initialize()
     debug("An error has occurred while mounting LittleFS\n");
   else
     debug("LittleFS mounted successfully\n");
+
+  // Get timezone codes
+  getTimezones();
 }
 
 String 
-ServerManager::readFile(fs::FS &fs, const char * path)
+ServerManager::readFile(fs::FS &fs, const char * path, bool singleLine)
 {
   debug("Reading file: " + String(path) + "\r\n");
   File file = fs.open(path, "r");
@@ -98,7 +102,10 @@ ServerManager::readFile(fs::FS &fs, const char * path)
 
   String fileContent;
   while(file.available()){
-    fileContent = file.readStringUntil('\n');
+    if (singleLine)
+      fileContent = file.readStringUntil('\n');
+    else
+      fileContent = file.readString();
     break;
   }
   file.close();
@@ -163,6 +170,14 @@ ServerManager::initWiFi()
   return true;
 }
 
+String 
+ServerManager::mainPageProcessor(const String& var)
+{
+  if(var == "CURR_TIME")
+    return m_time_str;
+
+  return String();
+}
 
 void 
 ServerManager::wifiFormScanNetworks(AsyncWebServerRequest *request)
@@ -241,4 +256,18 @@ ServerManager::wifiFormCallback(AsyncWebServerRequest *request)
   }
   restart = true;
   request->send(200, "text/plain", "Done. ESP will restart, connect to your router and go to IP address: " + ip);
+}
+
+
+void 
+ServerManager::getTimezones()
+{
+  String timezones_json = readFile(LittleFS, timezonePath, false);
+  DeserializationError error = deserializeJson(m_timezones, timezones_json);
+
+  if (error)
+    debug("Error deserializing timezone json: " + String(error.c_str()) + "\n");
+
+  // for (JsonPair kv : m_timezones.as<JsonObject>())
+  //   debug("[" + String(kv.key().c_str()) + "] = " + kv.value().as<String>() + "\n");
 }
