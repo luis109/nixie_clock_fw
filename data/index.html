@@ -17,6 +17,16 @@
   <div class="content">
       <h4><span class="reading" id="curr_time">%CURR_TIME%</span></h4>
   </div>
+  <div class="card">
+    <form action="/" method="POST">
+      <p>
+        <label for="timezone_setting">Timezone</label>
+        <select name="timezone_setting" id="timezone_setting">
+          %TIMEZONES%
+        </select><br>
+        <input type ="submit" value ="Apply">
+      </p>
+    </form>
   <script src="script.js"></script>
 </body>
 

@@ -44,13 +44,15 @@ private:
   const char* WIFI_FORM_PASS_PARAM = "pass";
   const char* WIFI_FORM_IP_PARAM = "ip";
   const char* WIFI_FORM_GATEWAY_PARAM = "gateway";
+  const char* TIMEZONE_FORM_TIMEZONE_PARAM = "timezone_setting";
 
   // File paths to save input values permanently
   const char* ssidPath = "/ssid.txt";
   const char* passPath = "/pass.txt";
   const char* ipPath = "/ip.txt";
   const char* gatewayPath = "/gateway.txt";
-  const char* timezonePath = "/zones.json";
+  const char* timezonesPath = "/zones.json";
+  const char* timezonePath = "/timezone.txt";
   IPAddress localIP;
   // Set your Gateway IP address
   IPAddress localGateway;
@@ -63,6 +65,8 @@ private:
   std::vector<String> m_network_list;
   //! Map of timezones
   JsonDocument m_timezones;
+  String m_curr_timezone;
+  String m_default_timezone = "Europe/Lisbon";
   // Time string
   String m_time_str;
 
@@ -81,6 +85,10 @@ private:
   // Replaces placeholder with LED state value
   String 
   mainPageProcessor(const String& var);
+
+  // Timezone form callback, to set timezone settings
+  void
+  timezoneFormCallback(AsyncWebServerRequest *request);
   
   //! Wifi form scan networks function
   void 

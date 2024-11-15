@@ -37,7 +37,8 @@ ServerManager::begin()
       // and set reconnect delay to 1 second
       client->send("hello!", NULL, millis(), 10000);
     });
-    
+
+    server->on("/", HTTP_POST, std::bind(&ServerManager::timezoneFormCallback, this, std::placeholders::_1));
     server->addHandler(events);
     server->begin();
     debug("Server started\n"); 
@@ -88,6 +89,10 @@ ServerManager::initialize()
 
   // Get timezone codes
   getTimezones();
+  // Set timezone
+  m_curr_timezone = readFile(LittleFS, timezonePath);
+  if (m_curr_timezone.isEmpty())
+    m_curr_timezone = m_default_timezone;
 }
 
 String 
@@ -176,6 +181,22 @@ ServerManager::mainPageProcessor(const String& var)
   if(var == "CURR_TIME")
     return m_time_str;
 
+  if (var == "TIMEZONES")
+  {
+    String options;
+    options.clear();
+
+    if (!m_curr_timezone.isEmpty())
+      options += "<option value=\"" + m_curr_timezone + "\">" + m_curr_timezone + "</option>\n";
+    for (JsonPair kv : m_timezones.as<JsonObject>())
+    {
+      if (String(kv.key().c_str()) == m_curr_timezone)
+        continue;
+      options += "<option value=\"" + String(kv.key().c_str()) + "\">" + String(kv.key().c_str()) + "</option>\n";
+    }
+    return options;
+  }
+
   return String();
 }
 
@@ -258,11 +279,34 @@ ServerManager::wifiFormCallback(AsyncWebServerRequest *request)
   request->send(200, "text/plain", "Done. ESP will restart, connect to your router and go to IP address: " + ip);
 }
 
+void 
+ServerManager::timezoneFormCallback(AsyncWebServerRequest *request)
+{
+  int params = request->params();
+
+  for(int i=0;i<params;i++)
+  {
+    AsyncWebParameter* p = request->getParam(i);
+    if(p->isPost()){
+      // HTTP POST ssid value
+      if (p->name() == TIMEZONE_FORM_TIMEZONE_PARAM) 
+      {
+        String key = p->value().c_str();
+        m_curr_timezone = key;
+        debug("Zone: " + key + "\n");
+        debug("Code: " + m_timezones[key].as<String>() + "\n");
+      }
+      debug("POST[" + p->name() + "]: " + p->value() + "\n");
+    }
+  }
+  request->send(LittleFS, "/index.html", "text/html", false, std::bind(&ServerManager::mainPageProcessor, this, std::placeholders::_1));
+}
+
 
 void 
 ServerManager::getTimezones()
 {
-  String timezones_json = readFile(LittleFS, timezonePath, false);
+  String timezones_json = readFile(LittleFS, timezonesPath, false);
   DeserializationError error = deserializeJson(m_timezones, timezones_json);
 
   if (error)
