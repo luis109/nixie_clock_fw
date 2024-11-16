@@ -6,6 +6,7 @@
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
 #include <functional>
+#include "time.h"
 
 #define SERVER_MANAGER_DEBUG
 class ServerManager
@@ -35,6 +36,31 @@ public:
     m_time_str = time_str;
   }
 
+
+  bool 
+  getInternetTime(struct tm* info)
+  {
+    if(!getLocalTime(info))
+    {
+      debug("Failed to obtain time");
+      return false;
+    }
+
+    return true;
+  }
+
+  String
+  getInternetTimeStr()
+  {
+    struct tm timeinfo;
+    if (!getInternetTime(&timeinfo))
+      return String();
+    
+    char time_str[64];
+    strftime(time_str, 64, "%A, %B %d %Y %H:%M:%S", &timeinfo);
+    return String(time_str);
+  }
+
 private:
   AsyncWebServer* server;
   AsyncEventSource* events;
@@ -52,24 +78,30 @@ private:
 
   //! File paths to save input values permanently
   //! Wifi manager form
-  const char* ssidPath = "/ssid.txt";
-  const char* passPath = "/pass.txt";
-  const char* ipPath = "/ip.txt";
-  const char* gatewayPath = "/gateway.txt";
-  const char* subnetPath = "/subnet.txt";
-  const char* dnsPath = "/dns.txt";
+  const char* m_path_ssid = "/ssid.txt";
+  const char* m_path_pass = "/pass.txt";
+  const char* m_path_ip = "/ip.txt";
+  const char* m_path_gateway = "/gateway.txt";
+  const char* m_path_subnet = "/subnet.txt";
+  const char* m_path_dns = "/dns.txt";
   //! Time settings
-  const char* timezonesPath = "/zones.json";
-  const char* timezonePath = "/timezone.txt";
+  const char* m_path_zones = "/zones.json";
+  const char* m_path_timezone = "/timezone.txt";
   
   // Timer variables
   const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
   //! Restart ESP flag
   bool m_restart;
+
+  //! Internet time
+  //! NTP server
+  const char* m_ntp_server = "pool.ntp.org";
+  const long  m_gmt_offset_sec = 0;
+  const int   m_daylight_offset_sec = 3600;
   //! Map of timezones
   JsonDocument m_timezones;
+  const String m_default_timezone = "Europe/Lisbon";
   String m_curr_timezone;
-  String m_default_timezone = "Europe/Lisbon";
   // Time string
   String m_time_str;
 
@@ -103,7 +135,7 @@ private:
 
   //! Initialize Serial and LittleFS
   void
-  initialize();
+  initFilesystem();
 
   void
   debug(const String& str)
@@ -113,8 +145,13 @@ private:
 #endif    
   }
 
+  //! Load timezones into memory. Configure ntp server. Setup timezone.
+  //! @return true if initialized successfully, false otherwise
+  bool
+  initInternetTime();
+
   void
-  getTimezones();
+  setTimezone(String timezone);
 };
 
 #endif

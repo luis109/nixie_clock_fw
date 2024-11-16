@@ -16,16 +16,18 @@ ServerManager::~ServerManager()
 void 
 ServerManager::begin()
 {
-  initialize();
+  initFilesystem();
 
   if(initWiFi())
   {
+    initInternetTime();
+
     // Route for root / web page
     server->on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
       request->send(LittleFS, "/index.html", "text/html", false, std::bind(&ServerManager::mainPageProcessor, this, std::placeholders::_1));
     });
     server->serveStatic("/", LittleFS, "/");
-    
+
     // Handle Web Server Events
     events->onConnect([this](AsyncEventSourceClient *client){
       if(client->lastId()){
@@ -35,7 +37,6 @@ ServerManager::begin()
       // and set reconnect delay to 1 second
       client->send("hello!", NULL, millis(), 10000);
     });
-
     server->on("/", HTTP_POST, std::bind(&ServerManager::timezoneFormCallback, this, std::placeholders::_1));
     server->addHandler(events);
     server->begin();
@@ -72,7 +73,7 @@ ServerManager::run()
 }
 
 void
-ServerManager::initialize()
+ServerManager::initFilesystem()
 {
   // Serial port for debugging purposes
 #ifdef SERVER_MANAGER_DEBUG
@@ -84,13 +85,6 @@ ServerManager::initialize()
     debug("An error has occurred while mounting LittleFS\n");
   else
     debug("LittleFS mounted successfully\n");
-
-  // Get timezone codes
-  getTimezones();
-  // Set timezone
-  m_curr_timezone = readFile(LittleFS, timezonePath);
-  if (m_curr_timezone.isEmpty())
-    m_curr_timezone = m_default_timezone;
 }
 
 String 
@@ -99,7 +93,7 @@ ServerManager::readFile(fs::FS &fs, const char * path, bool singleLine)
   debug("Reading file: " + String(path) + "\r\n");
   File file = fs.open(path, "r");
   if(!file || file.isDirectory()){
-    debug("- failed to open file for reading");
+    debug("- failed to open file for reading\n");
     return String();
   }
 
@@ -123,13 +117,13 @@ ServerManager::writeFile(fs::FS &fs, const char * path, const char * message)
   File file = fs.open(path, "w");
   if(!file)
   {
-    debug("- failed to open file for writing");
+    debug("- failed to open file for writing\n");
     return;
   }
   if(file.print(message))
-    debug("- file written");
+    debug("- file written\n");
   else
-    debug("- frite failed");
+    debug("- frite failed\n");
   file.close();
 }
 
@@ -186,8 +180,8 @@ ServerManager::initWiFi()
 String 
 ServerManager::mainPageProcessor(const String& var)
 {
-  if(var == "CURR_TIME")
-    return m_time_str;
+  // if(var == "CURR_TIME")
+  //   return m_time_str;
 
   if (var == "TIMEZONES")
   {
@@ -213,9 +207,11 @@ ServerManager::wifiFormScanNetworks(AsyncWebServerRequest *request)
 {
   String json = "[";
   int n = WiFi.scanComplete();
-  if(n == -2){
+  if(n == -2)
+  {
     WiFi.scanNetworks(true);
-  } else if(n){
+  } else if(n)
+  {
     for (int i = 0; i < n; ++i){
       if(i) json += ",";
       json += "{";
@@ -227,9 +223,8 @@ ServerManager::wifiFormScanNetworks(AsyncWebServerRequest *request)
       json += "}";
     }
     WiFi.scanDelete();
-    if(WiFi.scanComplete() == -2){
+    if(WiFi.scanComplete() == -2)
       WiFi.scanNetworks(true);
-    }
   }
   json += "]";
   request->send(200, "application/json", json);
@@ -248,38 +243,38 @@ ServerManager::wifiFormCallback(AsyncWebServerRequest *request)
       // HTTP POST ssid value
       if (p->name() == WIFI_FORM_SSID_PARAM) 
       {
-        writeFile(LittleFS, ssidPath, p->value().c_str());
+        writeFile(LittleFS, m_path_ssid, p->value().c_str());
         debug("SSID set to: " + String(p->value().c_str()) + "\n");
       }
       // HTTP POST pass value
       if (p->name() == WIFI_FORM_PASS_PARAM) 
       {
-        writeFile(LittleFS, passPath, p->value().c_str());
+        writeFile(LittleFS, m_path_pass, p->value().c_str());
         debug("Password set to: " + String(p->value().c_str()) + "\n");
       }
       // HTTP POST ip value
       if (p->name() == WIFI_FORM_IP_PARAM) 
       {
         ip = p->value().c_str();
-        writeFile(LittleFS, ipPath, p->value().c_str());
+        writeFile(LittleFS, m_path_ip, p->value().c_str());
         debug("IP Address set to: " + String(p->value().c_str()) + "\n");
       }
       // HTTP POST gateway value
       if (p->name() == WIFI_FORM_GATEWAY_PARAM) 
       {
-        writeFile(LittleFS, gatewayPath, p->value().c_str());
+        writeFile(LittleFS, m_path_gateway, p->value().c_str());
         debug("Gateway set to: " + String(p->value().c_str()) + "\n");
       }
       // HTTP POST subnet value
       if (p->name() == WIFI_FORM_SUBNET_PARAM) 
       {
-        writeFile(LittleFS, subnetPath, p->value().c_str());
+        writeFile(LittleFS, m_path_subnet, p->value().c_str());
         debug("Subnet set to: " + String(p->value().c_str()) + "\n");
       }
       // HTTP POST subnet value
       if (p->name() == WIFI_FORM_DNS_PARAM) 
       {
-        writeFile(LittleFS, dnsPath, p->value().c_str());
+        writeFile(LittleFS, m_path_dns, p->value().c_str());
         debug("DNS set to: " + String(p->value().c_str()) + "\n");
       }
       debug("POST[" + p->name() + "]: " + p->value() + "\n");
@@ -301,10 +296,9 @@ ServerManager::timezoneFormCallback(AsyncWebServerRequest *request)
       // HTTP POST ssid value
       if (p->name() == TIMEZONE_FORM_TIMEZONE_PARAM) 
       {
-        String key = p->value().c_str();
-        m_curr_timezone = key;
-        debug("Zone: " + key + "\n");
-        debug("Code: " + m_timezones[key].as<String>() + "\n");
+        m_curr_timezone = p->value().c_str();
+        writeFile(LittleFS, m_path_timezone, m_curr_timezone.c_str());
+        setTimezone(m_curr_timezone);
       }
       debug("POST[" + p->name() + "]: " + p->value() + "\n");
     }
@@ -312,16 +306,45 @@ ServerManager::timezoneFormCallback(AsyncWebServerRequest *request)
   request->send(LittleFS, "/index.html", "text/html", false, std::bind(&ServerManager::mainPageProcessor, this, std::placeholders::_1));
 }
 
-
-void 
-ServerManager::getTimezones()
+bool 
+ServerManager::initInternetTime()
 {
-  String timezones_json = readFile(LittleFS, timezonesPath, false);
+  // Get timezone codes
+  String timezones_json = readFile(LittleFS, m_path_zones, false);
   DeserializationError error = deserializeJson(m_timezones, timezones_json);
-
   if (error)
+  {
     debug("Error deserializing timezone json: " + String(error.c_str()) + "\n");
+    return false;
+  }
+
+  // Configure ntp server and time options
+  configTime(m_gmt_offset_sec, m_daylight_offset_sec, m_ntp_server);
+
+  // Set timezone
+  m_curr_timezone = readFile(LittleFS, m_path_timezone);
+  if (m_curr_timezone.isEmpty())
+    m_curr_timezone = m_default_timezone;
+
+  // Set timezone
+  setTimezone(m_curr_timezone);
+
+  // Check if we can actually get time
+  return true;
 
   // for (JsonPair kv : m_timezones.as<JsonObject>())
   //   debug("[" + String(kv.key().c_str()) + "] = " + kv.value().as<String>() + "\n");
+}
+
+void
+ServerManager::setTimezone(String timezone)
+{
+  String code = m_timezones[timezone].as<String>();
+
+  debug("Setting timezone to:\n");
+  debug("Zone: " + timezone + "\n");
+  debug("Code: " + code + "\n");
+  
+  setenv("TZ", code.c_str(), 1);
+  tzset();
 }
