@@ -3,6 +3,7 @@
 #include "DisplayDriver.hpp"
 
 ServerManager g_ws_manager;
+DisplayDriver g_ddriver;
 
 unsigned long lastTime = 0;  
 unsigned long timerDelay = 500;  // send readings timer
@@ -23,6 +24,9 @@ void setup()
   // Init web server
   g_ws_manager.begin();
   g_ws_manager.updateTimeString(g_ws_manager.getInternetTimeStr());
+
+  g_ddriver.begin();
+  g_ddriver.setDisplay(12, 34, 56);
 }
 
 void loop() 
@@ -40,4 +44,6 @@ void loop()
     
     lastTime = millis();
   }
+
+  g_ddriver.run();
 }
