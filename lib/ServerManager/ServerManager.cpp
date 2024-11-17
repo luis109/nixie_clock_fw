@@ -131,12 +131,12 @@ bool
 ServerManager::initWiFi()
 {
   // Load values saved in LittleFS
-  String ssid = readFile(LittleFS, ssidPath);
-  String pass = readFile(LittleFS, passPath);
-  String ip = readFile(LittleFS, ipPath);
-  String gateway = readFile(LittleFS, gatewayPath);
-  String subnet = readFile(LittleFS, subnetPath);
-  String dns = readFile(LittleFS, dnsPath);
+  String ssid = readFile(LittleFS, m_path_ssid);
+  String pass = readFile(LittleFS, m_path_pass);
+  String ip = readFile(LittleFS, m_path_ip);
+  String gateway = readFile(LittleFS, m_path_gateway);
+  String subnet = readFile(LittleFS, m_path_subnet);
+  String dns = readFile(LittleFS, m_path_dns);
 
   debug("SSID: " + ssid + "\n");
   debug("Password: " + pass + "\n");
