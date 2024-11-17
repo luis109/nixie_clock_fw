@@ -1,38 +1,43 @@
 #include <Arduino.h>
+#include "ServerManager.hpp"
 #include "DisplayDriver.hpp"
-// #include "ServerManager.hpp"
 
-DisplayDriver g_ddriver;
+ServerManager g_ws_manager;
 
+unsigned long lastTime = 0;  
+unsigned long timerDelay = 500;  // send readings timer
 
-// Initialize LittleFS
-// void initFS() {
-//   if (!LittleFS.begin()) {
-//     Serial.println("An error has occurred while mounting LittleFS");
-//   }
-//   else{
-//     Serial.println("LittleFS mounted successfully");
-//   }
+// String 
+// getLocalTimeString(){
+//   struct tm timeinfo;
+//   if (!g_ws_manager.getInternetTime(&timeinfo))
+//     return String();
+  
+//   char time_str[64];
+//   strftime(time_str, 64, "%A, %B %d %Y %H:%M:%S", &timeinfo);
+//   return String(time_str);
 // }
 
-void setup() {
-  // Serial port for debugging purposes
-  Serial.begin(115200);
-
-  // initFS();
-
-  // webStateMachine();
-
-  // Init and get the time
-  // configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-
-  // Init display driver
-  g_ddriver.begin();
+void setup() 
+{
+  // Init web server
+  g_ws_manager.begin();
+  g_ws_manager.updateTimeString(g_ws_manager.getInternetTimeStr());
 }
 
-void loop() {
-  // if (restart){
-  //   delay(5000);
-  //   ESP.restart();
-  // }
+void loop() 
+{
+  if (g_ws_manager.dev_restart())
+  {
+    delay(5000);
+    ESP.restart();
+  }
+
+  if ((millis() - lastTime) > timerDelay) 
+  {
+    g_ws_manager.updateTimeString(g_ws_manager.getInternetTimeStr());
+    g_ws_manager.run();
+    
+    lastTime = millis();
+  }
 }

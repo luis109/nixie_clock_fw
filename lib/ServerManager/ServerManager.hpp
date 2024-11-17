@@ -2,225 +2,154 @@
 #define SERVER_MANAGER_HPP
 
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
-#include "LittleFS.h"
-#include "ServerManagerDefinitions.hpp"
+#include <LittleFS.h>
+#include <functional>
+#include "time.h"
 
-// Create AsyncWebServer object on port 80
-AsyncWebServer server(80);
-
-//Variables to save values from HTML form
-String ssid;
-String pass;
-String ip;
-String gateway;
-
-// Set the device's IP address
-IPAddress localIP;
-
-// Set your Gateway IP address
-IPAddress localGateway;
-IPAddress subnet(255, 255, 0, 0);
-IPAddress dns(8, 8, 8, 8);
-
-// Stores LED state
-String ledState;
-
-// Restart ESP flag
-boolean restart = false;
-
-// Read File from LittleFS
-String 
-readFile(fs::FS &fs, const char * path)
+#define SERVER_MANAGER_DEBUG
+class ServerManager
 {
-  Serial.printf("Reading file: %s\r\n", path);
+public:
+    ServerManager();
+    ~ServerManager();
 
-  File file = fs.open(path, "r");
-  if(!file || file.isDirectory()){
-    Serial.println("- failed to open file for reading");
-    return String();
-  }
+  // Begin webserver
+  void 
+  begin();
 
-  String fileContent;
-  while(file.available()){
-    fileContent = file.readStringUntil('\n');
-    break;
-  }
-  file.close();
-  return fileContent;
-}
+  // Handle events
+  void 
+  run();
 
-// Write file to LittleFS
-void 
-writeFile(fs::FS &fs, const char * path, const char * message)
-{
-  Serial.printf("Writing file: %s\r\n", path);
-
-  File file = fs.open(path, "w");
-  if(!file){
-    Serial.println("- failed to open file for writing");
-    return;
-  }
-  if(file.print(message)){
-    Serial.println("- file written");
-  } else {
-    Serial.println("- frite failed");
-  }
-  file.close();
-}
-
-// Initialize WiFi
-bool 
-initWiFi() 
-{
-  if(ssid=="" || ip==""){
-    Serial.println("Undefined SSID or IP address.");
-    return false;
-  }
-
-  WiFi.mode(WIFI_STA);
-  localIP.fromString(ip.c_str());
-  localGateway.fromString(gateway.c_str());
-
-  if (!WiFi.config(localIP, localGateway, subnet, dns)){
-    Serial.println("STA Failed to configure");
-    return false;
-  }
-  WiFi.begin(ssid.c_str(), pass.c_str());
-
-  Serial.println("Connecting to WiFi...");
-  delay(SM_WIFI_TIMEOUT);
-  if(WiFi.status() != WL_CONNECTED) {
-    Serial.println("Failed to connect.");
-    return false;
-  }
-
-  Serial.println(WiFi.localIP());
-  return true;
-}
-
-// Replaces placeholder with LED state value
-String 
-processor(const String& var)
-{
-  if(var == "STATE") {
-    if(!digitalRead(SM_LED_PIN)) {
-      ledState = "ON";
-    }
-    else {
-      ledState = "OFF";
-    }
-    return ledState;
-  }
-  return String();
-}
-
-void
-webStateMachine()
-{
-  // Set GPIO 2 as an OUTPUT
-  pinMode(SM_LED_PIN, OUTPUT);
-  digitalWrite(SM_LED_PIN, LOW);
-
-  // Load values saved in LittleFS
-  ssid = readFile(LittleFS, SM_PATH_SSID);
-  pass = readFile(LittleFS, SM_PATH_PASS);
-  ip = readFile(LittleFS, SM_PATH_IP);
-  gateway = readFile (LittleFS, SM_PATH_GATEWAY);
-
-#ifdef SERVER_MANAGER_DEBUG
-  Serial.println(ssid);
-  Serial.println(pass);
-  Serial.println(ip);
-  Serial.println(gateway);
-#endif
-
-
-  if(initWiFi()) {
-    // Route for root / web page
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) 
-    {
-      request->send(LittleFS, "/index.html", "text/html", false, processor);
-    });
-    
-    server.serveStatic("/", LittleFS, "/");
-    
-    // Route to set GPIO state to HIGH
-    server.on("/on", HTTP_GET, [](AsyncWebServerRequest *request) 
-    {
-      digitalWrite(SM_LED_PIN, LOW);
-      request->send(LittleFS, "/index.html", "text/html", false, processor);
-    });
-
-    // Route to set GPIO state to LOW
-    server.on("/off", HTTP_GET, [](AsyncWebServerRequest *request) 
-    {
-      digitalWrite(SM_LED_PIN, HIGH);
-      request->send(LittleFS, "/index.html", "text/html", false, processor);
-    });
-    server.begin();
-  }
-  else 
+  bool
+  dev_restart()
   {
-    // Connect to Wi-Fi network with SSID and password
-#ifdef SERVER_MANAGER_DEBUG
-    Serial.println("Setting AP (Access Point)");
-#endif
-    // NULL sets an open Access Point
-    WiFi.softAP("ESP-WIFI-MANAGER", NULL);
-
-    IPAddress IP = WiFi.softAPIP();
-#ifdef SERVER_MANAGER_DEBUG
-    Serial.print("AP IP address: ");
-    Serial.println(IP);
-#endif
-
-    // Web Server Root URL
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-      request->send(LittleFS, "/wifimanager.html", "text/html");
-    });
-    
-    server.serveStatic("/", LittleFS, "/");
-    
-    server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) {
-      int params = request->params();
-      for(int i=0;i<params;i++){
-        AsyncWebParameter* p = request->getParam(i);
-        if(p->isPost()){
-          // HTTP POST ssid value
-          if (p->name() == SM_PARAM_SSID) {
-            ssid = p->value().c_str();
-            // Write file to save value
-            writeFile(LittleFS, SM_PATH_SSID, ssid.c_str());
-          }
-          // HTTP POST pass value
-          if (p->name() == SM_PARAM_PASS) {
-            pass = p->value().c_str();
-            // Write file to save value
-            writeFile(LittleFS, SM_PATH_PASS, pass.c_str());
-          }
-          // HTTP POST ip value
-          if (p->name() == SM_PARAM_IP) {
-            ip = p->value().c_str();
-            // Write file to save value
-            writeFile(LittleFS, SM_PATH_IP, ip.c_str());
-          }
-          // HTTP POST gateway value
-          if (p->name() == SM_PARAM_GATEWAY) {
-            gateway = p->value().c_str();
-            // Write file to save value
-            writeFile(LittleFS, SM_PATH_GATEWAY, gateway.c_str());
-          }
-#ifdef SERVER_MANAGER_DEBUG
-          Serial.printf("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
-#endif
-        }
-      }
-      restart = true;
-      request->send(200, "text/plain", "Done. ESP will restart, connect to your router and go to IP address: " + ip);
-    });
-    server.begin();
+    return m_restart;
   }
-}
 
-#endif
+  // Update variable values
+  void
+  updateTimeString(const String& time_str)
+  {
+    m_time_str = time_str;
+  }
+
+
+  bool 
+  getInternetTime(struct tm* info)
+  {
+    if(!getLocalTime(info))
+    {
+      debug("Failed to obtain time");
+      return false;
+    }
+
+    return true;
+  }
+
+  String
+  getInternetTimeStr()
+  {
+    struct tm timeinfo;
+    if (!getInternetTime(&timeinfo))
+      return String();
+    
+    char time_str[64];
+    strftime(time_str, 64, "%A, %B %d %Y %H:%M:%S", &timeinfo);
+    return String(time_str);
+  }
+
+private:
+  AsyncWebServer* server;
+  AsyncEventSource* events;
+  
+  //! HTTP POST request parameters
+  //! Wifi manager
+  const char* WIFI_FORM_SSID_PARAM = "ssid";
+  const char* WIFI_FORM_PASS_PARAM = "pass";
+  const char* WIFI_FORM_IP_PARAM = "ip";
+  const char* WIFI_FORM_GATEWAY_PARAM = "gateway";
+  const char* WIFI_FORM_SUBNET_PARAM = "subnet";
+  const char* WIFI_FORM_DNS_PARAM = "dns";
+  //! Settings
+  const char* TIMEZONE_FORM_TIMEZONE_PARAM = "timezone_setting";
+
+  //! File paths to save input values permanently
+  //! Wifi manager form
+  const char* m_path_ssid = "/ssid.txt";
+  const char* m_path_pass = "/pass.txt";
+  const char* m_path_ip = "/ip.txt";
+  const char* m_path_gateway = "/gateway.txt";
+  const char* m_path_subnet = "/subnet.txt";
+  const char* m_path_dns = "/dns.txt";
+  //! Time settings
+  const char* m_path_zones = "/zones.json";
+  const char* m_path_timezone = "/timezone.txt";
+  
+  // Timer variables
+  const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
+  //! Restart ESP flag
+  bool m_restart;
+
+  //! Internet time
+  //! NTP server
+  const char* m_ntp_server = "pool.ntp.org";
+  const long  m_gmt_offset_sec = 0;
+  const int   m_daylight_offset_sec = 3600;
+  //! Map of timezones
+  JsonDocument m_timezones;
+  const String m_default_timezone = "Europe/Lisbon";
+  String m_curr_timezone;
+  // Time string
+  String m_time_str;
+
+  //! Read File from LittleFS
+  String 
+  readFile(fs::FS &fs, const char * path, bool singleLine = true);
+
+  //! Write file to LittleFS
+  void 
+  writeFile(fs::FS &fs, const char * path, const char * message);
+
+  //! Initialize WiFi
+  bool 
+  initWiFi();
+
+  //! Replaces placeholder with LED state value
+  String 
+  mainPageProcessor(const String& var);
+
+  //! Timezone form callback, to set timezone settings
+  void
+  timezoneFormCallback(AsyncWebServerRequest *request);
+  
+  //! Wifi form scan networks function
+  void 
+  wifiFormScanNetworks(AsyncWebServerRequest *request);
+
+  //! Wifi form callback function
+  void 
+  wifiFormCallback(AsyncWebServerRequest *request);
+
+  //! Initialize Serial and LittleFS
+  void
+  initFilesystem();
+
+  void
+  debug(const String& str)
+  {
+#ifdef SERVER_MANAGER_DEBUG
+      Serial.print(str);
+#endif    
+  }
+
+  //! Load timezones into memory. Configure ntp server. Setup timezone.
+  //! @return true if initialized successfully, false otherwise
+  bool
+  initInternetTime();
+
+  void
+  setTimezone(String timezone);
+};
