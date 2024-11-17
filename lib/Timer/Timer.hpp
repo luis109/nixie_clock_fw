@@ -7,9 +7,12 @@ struct Timer
 {
   uint32_t start;
   uint32_t top;
+  typedef unsigned long (*timer_ptr)();
+  timer_ptr timer;
 
-  Timer()
+  Timer(timer_ptr _timer)
   {
+    timer = _timer;
     reset();
   }
 
@@ -23,13 +26,13 @@ struct Timer
   void
   reset()
   {
-    start = micros();
+    start = timer();
   }
 
   bool
   overflow()
   {
-    return micros() - start > top;
+    return timer() - start > top;
   }
 };
 #endif
