@@ -10,6 +10,7 @@ class DisplayDriver
 {
   public:
     DisplayDriver();
+    ~DisplayDriver();
 
     //! Initialize the display
     void
@@ -77,7 +78,7 @@ class DisplayDriver
       }
     } m_config[DISPLAY_DIGIT_NUM];
     //! Display timer
-    Timer m_display_timer;
+    Timer* m_display_timer;
     //! Index for digit to display
     uint8_t m_digit_index;
     // LED color

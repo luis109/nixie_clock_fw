@@ -4,7 +4,13 @@ DisplayDriver::DisplayDriver():
   m_digit_index(0)
 {
   resetConfig();
-  m_display_timer.reset();
+  m_display_timer = new Timer(micros);
+  m_display_timer->reset();
+}
+
+DisplayDriver::~DisplayDriver()
+{
+  delete m_display_timer;
 }
 
 void
@@ -26,11 +32,7 @@ DisplayDriver::begin()
   resetHV2155();
 
   FastLED.addLeds<WS2812B, DISPLAY_PIN_LED, RGB>(m_led_colors, DISPLAY_DIGIT_NUM);
-  // Use the fastled library instead
-  // pinMode(pin_led, OUTPUT);
-  // digitalWrite(pin_led, LOW);
-
-  m_display_timer.setTop(1000);
+  m_display_timer->setTop(1000);
 }
 
 void
@@ -100,7 +102,7 @@ DisplayDriver::setColor(const uint8_t digit, const CRGB::HTMLColorCode color)
 void
 DisplayDriver::run()
 {
-  if (!m_display_timer.overflow())
+  if (!m_display_timer->overflow())
     return;
 
   if (!m_config[m_digit_index].enabled)
@@ -144,5 +146,5 @@ DisplayDriver::run()
   else
     m_digit_index++;
 
-  m_display_timer.reset();
+  m_display_timer->reset();
 }
