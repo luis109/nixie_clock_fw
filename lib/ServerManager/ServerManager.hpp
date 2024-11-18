@@ -7,6 +7,7 @@
 #include <LittleFS.h>
 #include <functional>
 #include "time.h"
+#include "Timer.hpp"
 
 #define SERVER_MANAGER_DEBUG
 class ServerManager
@@ -42,7 +43,7 @@ public:
   {
     if(!getLocalTime(info))
     {
-      debug("Failed to obtain time");
+      debug("Failed to obtain time\n");
       return false;
     }
 
@@ -88,10 +89,17 @@ private:
   const char* m_path_zones = "/zones.json";
   const char* m_path_timezone = "/timezone.txt";
   
-  // Timer variables
-  const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
+  //! Wifi manager
+  //! Connection timeout timer
+  Timer* m_timer_wifi_conn;
+  //! Interval to wait for Wi-Fi connection (milliseconds)
+  const uint32_t m_conn_timeout = 15000;
+
+  //! State variables
   //! Restart ESP flag
   bool m_restart;
+  //! Main page started
+  bool m_main_started;
 
   //! Internet time
   //! NTP server
@@ -102,8 +110,14 @@ private:
   JsonDocument m_timezones;
   const String m_default_timezone = "Europe/Lisbon";
   String m_curr_timezone;
-  // Time string
+  Timer* m_timer_ntp_response;
+  //! Interval to wait for ntp server response (milliseconds)
+  const uint32_t m_ntp_timeout = 15000;
   String m_time_str;
+  //! Event fire timer
+  Timer* m_timer_events;
+  //! Event fire interval (milliseconds)
+  const u_int32_t m_event_interval = 500;
 
   //! Read File from LittleFS
   String 
@@ -143,6 +157,14 @@ private:
 #ifdef SERVER_MANAGER_DEBUG
       Serial.print(str);
 #endif    
+  }
+
+  void
+  setTimers()
+  {
+    m_timer_wifi_conn->setTop(m_conn_timeout);
+    m_timer_ntp_response->setTop(m_ntp_timeout);
+    m_timer_events->setTop(m_event_interval);
   }
 
   //! Load timezones into memory. Configure ntp server. Setup timezone.

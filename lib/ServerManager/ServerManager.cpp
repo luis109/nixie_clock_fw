@@ -3,19 +3,27 @@
 ServerManager::ServerManager():
   server(new AsyncWebServer(80)),
   events(new AsyncEventSource("/events")),
+  m_timer_wifi_conn(new Timer(millis)),
   m_restart(false),
-  m_time_str(String())
+  m_main_started(false),
+  m_timer_ntp_response(new Timer(millis)),
+  m_time_str(String()),
+  m_timer_events(new Timer(millis))
 { }
 
 ServerManager::~ServerManager()
 {
   delete events;
   delete server;
+  delete m_timer_wifi_conn;
+  delete m_timer_ntp_response;
+  delete m_timer_events;
 }
 
 void 
 ServerManager::begin()
 {
+  setTimers();
   initFilesystem();
 
   if(initWiFi())
@@ -40,7 +48,8 @@ ServerManager::begin()
     server->on("/", HTTP_POST, std::bind(&ServerManager::timezoneFormCallback, this, std::placeholders::_1));
     server->addHandler(events);
     server->begin();
-    debug("Server started\n"); 
+    debug("Server started\n");
+    m_main_started = true;
   }
   else 
   {
@@ -64,12 +73,21 @@ ServerManager::begin()
   }
 }
 
-void 
+void
 ServerManager::run()
 {
-  // Send Events to the Web Server with the Sensor Readings
-  events->send("ping", NULL, millis());
+  if (!m_main_started)
+    return;
+
+  if (!m_timer_events->overflow())
+    return;
+
+  // Send Events to the Web Server
+  updateTimeString(getInternetTimeStr());
+  // events->send("ping", NULL, millis());
   events->send(m_time_str.c_str(), "curr_time", millis());
+
+  m_timer_events->reset();
 }
 
 void
@@ -146,7 +164,7 @@ ServerManager::initWiFi()
   debug("DNS: " + dns + "\n");
 
   if(ssid=="" || ip==""){
-    debug("Undefined SSID or IP address.");
+    debug("Undefined SSID or IP address.\n");
     return false;
   }
 
@@ -161,20 +179,24 @@ ServerManager::initWiFi()
   localDNS.fromString(dns);
 
   if (!WiFi.config(localIP, localGateway, localSubnet, localDNS)){
-    debug("STA Failed to configure");
+    debug("STA Failed to configure\n");
     return false;
   }
   WiFi.begin(ssid.c_str(), pass.c_str());
 
-  debug("Connecting to WiFi...");
-  delay(interval);
-  if(WiFi.status() != WL_CONNECTED) {
-    debug("Failed to connect.");
-    return false;
+  debug("Connecting to WiFi...\n");
+  m_timer_wifi_conn->reset();
+  while(!m_timer_wifi_conn->overflow())
+  {
+    if(WiFi.status() == WL_CONNECTED) 
+    {
+      debug("Connected: " + WiFi.localIP().toString() + "\n");
+      return true;
+    }
   }
 
-  debug(WiFi.localIP().toString());
-  return true;
+  debug("Failed to connect.\n");
+  return false;
 }
 
 String 
@@ -329,8 +351,21 @@ ServerManager::initInternetTime()
   // Set timezone
   setTimezone(m_curr_timezone);
 
-  // Check if we can actually get time
-  return true;
+  m_timer_ntp_response->reset();
+  struct tm timeinfo;
+  while(!m_timer_ntp_response->overflow())
+  {
+    String time_str = getInternetTimeStr();
+    if (time_str != "")
+    {
+      debug("Got internet time: " + time_str + "\n");
+      updateTimeString(time_str);
+      return true;
+    }
+  }
+
+  debug("Unable to get internet time\n");
+  return false;
 
   // for (JsonPair kv : m_timezones.as<JsonObject>())
   //   debug("[" + String(kv.key().c_str()) + "] = " + kv.value().as<String>() + "\n");
