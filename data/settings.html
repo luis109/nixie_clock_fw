@@ -15,25 +15,13 @@
     <h3>Internet Nixie Clock</h3>
   </div>
   <div class="content">
-      <h4><span class="reading" id="curr_time"></span></h4>
+      <h4><span class="reading" id="settings">SETTINGS</span></h4>
   </div>
-  <div class="card">
-    <form action="/" method="POST">
-      <p>
-        <label for="timezone_setting">Timezone</label>
-        <select name="timezone_setting" id="timezone_setting">
-          %TIMEZONES%
-        </select><br>
-        <input type ="submit" value ="Apply">
-      </p>
-    </form>
-  </div>
-  <div class="card">
-    <form action="/settings">
-      <input type="submit" value="Settings" />
-    </form>
-  </div>
-  <script src="script.js"></script>
+  <div class="card"> 
+    <form action="/"> 
+      <input type="submit" value="Main Page" /> 
+    </form> 
+  </div> 
 </body>
 
 

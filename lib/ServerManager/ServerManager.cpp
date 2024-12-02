@@ -34,6 +34,11 @@ ServerManager::begin()
     server->on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
       request->send(LittleFS, "/index.html", "text/html", false, std::bind(&ServerManager::mainPageProcessor, this, std::placeholders::_1));
     });
+
+    // Route for Settings page
+    server->on("/settings", HTTP_GET, [this](AsyncWebServerRequest *request) {
+      request->send(LittleFS, "/settings.html", "text/html");
+    });
     server->serveStatic("/", LittleFS, "/");
 
     // Handle Web Server Events
